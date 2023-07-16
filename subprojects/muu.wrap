@@ -1,0 +1,8 @@
+[wrap-git]
+url = https://github.com/marzer/muu.git
+revision = 6c6b40ce05df8c1b1d9636a531106f7c6a99a78f
+depth = 1
+clone-recursive = false
+
+[provide]
+dependency_names = muu, libmuu
