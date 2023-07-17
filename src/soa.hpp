@@ -25,6 +25,7 @@ SOAGEN_DISABLE_SPAM_WARNINGS;
 //----------------------------------------------------------------------------------------------------------------------
 // forward declarations
 //----------------------------------------------------------------------------------------------------------------------
+
 namespace rt
 {
 	class spheres;
@@ -86,7 +87,7 @@ namespace rt
 		template <size_type I>
 		static constexpr auto& column_name = column_name_<I>::value;
 
-		static constexpr std::tuple<int, float, const char*> kek = { 1, 2.0, "3" };
+		static constexpr std::tuple<int, float, const char*> kek = { 1, 2.0f, "3" };
 
 	  private:
 		using table_type = soagen::table<table_traits, allocator_type>;

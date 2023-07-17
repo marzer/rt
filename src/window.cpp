@@ -1,16 +1,22 @@
 #include "window.hpp"
-#include <stdexcept>
+#include "image_view.hpp"
 MUU_DISABLE_WARNINGS;
+#include <stdexcept>
+#include <chrono>
 #include <SDL.h>
+#include <string>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
 
-window::window(const char* title, vec2u size)
+window::window(std::string_view title, vec2u size)
 	: size_{ size },
-	  handles_{
-		  SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, size.x, size.y, SDL_WINDOW_OPENGL)
-	  }
+	  handles_{ SDL_CreateWindow(std::string(title).c_str(),
+								 SDL_WINDOWPOS_CENTERED,
+								 SDL_WINDOWPOS_CENTERED,
+								 static_cast<int>(size.x),
+								 static_cast<int>(size.y),
+								 SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI) }
 {
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
@@ -22,8 +28,8 @@ window::window(const char* title, vec2u size)
 	handles_[2] = SDL_CreateTexture(static_cast<SDL_Renderer*>(handles_[1]),
 									SDL_PIXELFORMAT_RGBA8888,
 									SDL_TEXTUREACCESS_STREAMING,
-									size.x,
-									size.y);
+									static_cast<int>(size.x),
+									static_cast<int>(size.y));
 }
 
 window::window(window&& other) noexcept //
@@ -50,17 +56,36 @@ window::~window() noexcept
 		SDL_DestroyWindow(static_cast<SDL_Window*>(handles_[0]));
 }
 
-void window::loop(muu::function_view<void(std::span<uint32_t>)> func)
+MUU_PURE_INLINE_GETTER
+window::operator bool() const noexcept
 {
-	while (true)
+	for (auto handle : handles_)
+		if (!handle)
+			return false;
+	return true;
+}
+
+void window::loop(const window_events& ev)
+{
+	using clock	   = std::chrono::steady_clock;
+	auto prev_time = clock::now();
+
+	while (ev.should_quit ? !ev.should_quit() : true)
 	{
 		if (SDL_Event e; SDL_PollEvent(&e))
 		{
-			if (e.type == SDL_QUIT)
+			if (e.type == SDL_APP_TERMINATING || e.type == SDL_QUIT)
 				break;
 		}
 
-		if (func)
+		auto time	  = clock::now();
+		const auto dt = time - prev_time;
+		prev_time	  = time;
+
+		if (ev.update)
+			ev.update(std::min(std::chrono::duration<float>{ dt }.count(), 0.1f));
+
+		if (ev.render)
 		{
 			void* pixels{};
 			int pitch{};
@@ -69,7 +94,8 @@ void window::loop(muu::function_view<void(std::span<uint32_t>)> func)
 			const auto unlock =
 				muu::scope_guard{ [&]() noexcept { SDL_UnlockTexture(static_cast<SDL_Texture*>(handles_[2])); } };
 
-			func(std::span<uint32_t>{ static_cast<uint32_t*>(pixels), size_.x * size_.y });
+			assert(static_cast<size_t>(pitch) == sizeof(uint32_t) * size_.x);
+			ev.render({ static_cast<uint32_t*>(pixels), size_ });
 		}
 
 		SDL_RenderClear(static_cast<SDL_Renderer*>(handles_[1]));

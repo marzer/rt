@@ -853,11 +853,7 @@
 		&& (!SOAGEN_CLANG || SOAGEN_CLANG >= 15)
 		#define SOAGEN_HAS_CONSTEVAL 1
 	#else
-		#ifdef SOAGEN_DOXYGEN
-			#define SOAGEN_HAS_CONSTEVAL SOAGEN_DOXYGEN
-		#else
-			#define SOAGEN_HAS_CONSTEVAL 0
-		#endif
+		#define SOAGEN_HAS_CONSTEVAL SOAGEN_DOXYGEN
 	#endif
 #endif
 
@@ -2905,11 +2901,11 @@ namespace soagen::detail
 	  private:
 		template <size_t... Cols>
 		SOAGEN_CPP20_CONSTEXPR
-		static constexpr void destruct_row([[maybe_unused]] column_pointers& columns,
-										   [[maybe_unused]] size_t index,
-										   [[maybe_unused]] size_t leftmost_column,
-										   [[maybe_unused]] size_t rightmost_column,
-										   std::index_sequence<Cols...>) noexcept
+		static void destruct_row([[maybe_unused]] column_pointers& columns,
+								 [[maybe_unused]] size_t index,
+								 [[maybe_unused]] size_t leftmost_column,
+								 [[maybe_unused]] size_t rightmost_column,
+								 std::index_sequence<Cols...>) noexcept
 		{
 			static_assert(all_nothrow_destructible, "column storage_types must be nothrow-destructible");
 
@@ -2941,9 +2937,9 @@ namespace soagen::detail
 
 		template <size_t... Cols>
 		SOAGEN_CPP20_CONSTEXPR
-		static constexpr void destruct_row([[maybe_unused]] column_pointers& columns,
-										   [[maybe_unused]] size_t index,
-										   std::index_sequence<Cols...>) noexcept
+		static void destruct_row([[maybe_unused]] column_pointers& columns,
+								 [[maybe_unused]] size_t index,
+								 std::index_sequence<Cols...>) noexcept
 		{
 			static_assert(all_nothrow_destructible, "column storage_types must be nothrow-destructible");
 

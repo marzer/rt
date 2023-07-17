@@ -3,28 +3,38 @@
 # See https://github.com/marzer/rt/blob/master/LICENSE for the full license text.
 # SPDX-License-Identifier: MIT
 
-cpp_files = files(
-	'main.cpp',
-	'window.cpp',
-	'camera.cpp'
-)
+fs = import('fs')
+file_names = [
+	'common',
+	'soa',
+	'main',
+	'window',
+	'camera',
+	'image_view',
+	'scene',
+]
+cpp_files = []
+extra_files = []
+foreach name : file_names
+	foreach suffix : ['.hpp','.cpp','.toml']
+		if fs.is_file(name + suffix)
+			if suffix == '.cpp'
+				cpp_files += files(name + suffix)
+			else
+				extra_files += files(name + suffix)
+			endif
+		endif
+	endforeach
+endforeach
 
-hpp_files = files(
-	'common.hpp',
-	'window.hpp',
-	'camera.hpp',
-	'soa.hpp'
-)
-
-misc_files = files(
-	'soa.toml'
-)
 
 dependencies = []
 dependencies += global_dependencies
 dependencies += subproject('muu', default_options: subproject_overrides).get_variable('muu_dep')
 dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2_dep')
 dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2main_dep')
+dependencies += subproject('xsimd', default_options: subproject_overrides).get_variable('xsimd_dep')
+dependencies += subproject('tomlplusplus', default_options: subproject_overrides).get_variable('tomlplusplus_dep')
 
 args = []
 args += global_args
@@ -41,10 +51,10 @@ overrides += [
 
 exe = executable(
 	meson.project_name(),
-	cpp_files + hpp_files,
+	cpp_files,
 	cpp_args: args,
 	link_args: global_link_args,
 	dependencies: dependencies,
 	override_options: overrides,
-	extra_files: misc_files
+	extra_files: extra_files
 )
