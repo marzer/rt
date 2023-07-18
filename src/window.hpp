@@ -6,7 +6,7 @@ MUU_ENABLE_WARNINGS;
 
 namespace rt
 {
-	struct window_events
+	struct events
 	{
 		std::function<bool()> should_quit;
 		std::function<void(float)> update;
@@ -35,10 +35,8 @@ namespace rt
 		MUU_PURE_GETTER
 		explicit operator bool() const noexcept;
 
-		void loop(const window_events& ev);
+		void loop(const events& ev);
 
-		static void subsystem_initialize();
-		static void subsystem_shutdown() noexcept;
 		static void error_message_box(const char* title, const char* msg, const window* = nullptr) noexcept;
 	};
 

@@ -12,9 +12,12 @@ file_names = [
 	'camera',
 	'image_view',
 	'scene',
+	'scalar_ray_tracer',
+	'simd_ray_tracer',
 ]
 cpp_files = []
 extra_files = []
+extra_files += scene_files
 foreach name : file_names
 	foreach suffix : ['.hpp','.cpp','.toml']
 		if fs.is_file(name + suffix)

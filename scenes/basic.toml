@@ -1,0 +1,5 @@
+camera = { position = [0, 1, 0], direction = [0, 0, -1] }
+
+spheres = [
+	{ position = [0, 0, -3] }
+]

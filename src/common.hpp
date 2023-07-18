@@ -8,8 +8,10 @@ MUU_DISABLE_WARNINGS;
 #include <utility>
 #include <array>
 #include <string_view>
-#include <muu/matrix.h>
 #include <muu/vector.h>
+#include <muu/quaternion.h>
+#include <muu/matrix.h>
+#include <muu/plane.h>
 #include <muu/scope_guard.h>
 #include <muu/assume_aligned.h>
 MUU_ENABLE_WARNINGS;
@@ -35,19 +37,37 @@ namespace rt
 	using std::int16_t;
 	using std::int8_t;
 
-	using vec2u = muu::vector<unsigned, 2>;
-	using vec2	= muu::vector<float, 2>;
-	using vec3	= muu::vector<float, 3>;
+	using vec2u	 = muu::vector<unsigned, 2>;
+	using vec2	 = muu::vector<float, 2>;
+	using vec3	 = muu::vector<float, 3>;
+	using vec4	 = muu::vector<float, 4>;
+	using quat	 = muu::quaternion<float>;
+	using mat3	 = muu::matrix<float, 3, 3>;
+	using mat4	 = muu::matrix<float, 4, 4>;
+	using plane	 = muu::plane<float>;
+	using floats = muu::constants<float>;
 
 	struct scene;
-	struct window_events;
+	struct events;
+	struct viewport;
+
 	class window;
 	class image_view;
+	class camera;
 
 	// soa:
-	class spheres;
-	class vertices;
-	class boxes;
-	class cones;
 	class planes;
+	class spheres;
+	class boxes;
+
+	class MUU_ABSTRACT_INTERFACE ray_tracer_interface
+	{
+	  public:
+		virtual void render(const scene&, image_view&, muu::thread_pool&) noexcept = 0;
+
+		virtual ~ray_tracer_interface() noexcept = default;
+	};
+
+	class scalar_ray_tracer;
+	class simd_ray_tracer;
 }

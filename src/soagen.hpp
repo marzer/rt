@@ -1227,6 +1227,96 @@ namespace soagen
 	template <typename T, typename Arg = size_t>
 	inline constexpr bool has_nothrow_unordered_erase_member =
 		detail::has_nothrow_unordered_erase_member_<T, Arg>::value;
+
+	// trait for determining the actual storage type for a column.
+	// we can strip off const/volatile and coerce all pointers to be void* to reduce template instantiation burden
+	namespace detail
+	{
+		template <typename ValueType>
+		struct storage_type_
+		{
+			using type = ValueType;
+		};
+		template <typename T>
+		struct storage_type_<T*>
+		{
+			using type = void*;
+		};
+		template <typename T>
+		struct storage_type_<const T*> : public storage_type_<T*>
+		{};
+		template <typename T>
+		struct storage_type_<volatile T*> : public storage_type_<T*>
+		{};
+		template <typename T>
+		struct storage_type_<const volatile T*> : public storage_type_<T*>
+		{};
+		template <typename T>
+		struct storage_type_<const T> : public storage_type_<T>
+		{};
+		template <typename T>
+		struct storage_type_<volatile T> : public storage_type_<T>
+		{};
+		template <typename T>
+		struct storage_type_<const volatile T> : public storage_type_<T>
+		{};
+	}
+	template <typename ValueType>
+	using storage_type = typename detail::storage_type_<ValueType>::type;
+
+	// trait for determining the default parameter type for a column.
+	// ideally we want to pass small+fast things by value, move-only things by rvalue,
+	// and everything else as const lvalue.
+	namespace detail
+	{
+		template <typename ValueType,
+				  bool Value = std::is_scalar_v<ValueType>		//
+							|| std::is_fundamental_v<ValueType> //
+							|| (std::is_trivially_copyable_v<ValueType> && sizeof(ValueType) <= sizeof(void*) * 2),
+				  bool Move = !std::is_copy_constructible_v<ValueType> && std::is_move_constructible_v<ValueType>>
+		struct param_type_
+		{
+			using type = ValueType;
+		};
+		template <typename ValueType>
+		struct param_type_<ValueType, false, true>
+		{
+			using type = std::add_rvalue_reference_t<ValueType>;
+		};
+		template <typename ValueType>
+		struct param_type_<ValueType, false, false>
+		{
+			using type = std::add_lvalue_reference_t<std::add_const_t<ValueType>>;
+		};
+	}
+	template <typename ValueType>
+	using param_type = typename detail::param_type_<ValueType>::type;
+
+	template <typename... Args>
+	struct forwarder
+	{
+		static_assert(sizeof...(Args));
+		static_assert((std::is_reference_v<Args> && ...));
+
+		template <size_t Index>
+		using type = type_at_index<Index, Args...>;
+
+		void* ptrs[sizeof...(Args)];
+
+		SOAGEN_DEFAULT_RULE_OF_FIVE(forwarder);
+
+		SOAGEN_NODISCARD_CTOR
+		constexpr forwarder(Args&&... args) noexcept //
+			: ptrs{ const_cast<void*>(static_cast<const volatile void*>(&args))... }
+		{}
+	};
+	template <typename... Args>
+	forwarder(Args&&...) -> forwarder<Args&&...>;
+
+	template <typename T>
+	inline constexpr bool is_forwarder = false;
+	template <typename... T>
+	inline constexpr bool is_forwarder<forwarder<T...>> = true;
 }
 
 #if SOAGEN_ALWAYS_OPTIMIZE
@@ -2191,9 +2281,68 @@ namespace soagen::detail
 		//--- construction ---------------------------------------------------------------------------------------------
 
 		template <typename... Args>
+		static constexpr bool is_constructible = std::is_constructible_v<storage_type, Args&&...>;
+		template <typename T>
+		static constexpr bool is_constructible<T*&> = std::is_same_v<storage_type, void*>;
+		template <typename T>
+		static constexpr bool is_constructible<T*&&> = std::is_same_v<storage_type, void*>;
+		template <typename... Args>
+		static constexpr bool is_constructible<forwarder<Args...>&&> = is_constructible<Args...>;
+
+		template <typename... Args>
+		static constexpr bool is_nothrow_constructible = std::is_nothrow_constructible_v<storage_type, Args&&...>;
+		template <typename T>
+		static constexpr bool is_nothrow_constructible<T*&> = std::is_same_v<storage_type, void*>;
+		template <typename T>
+		static constexpr bool is_nothrow_constructible<T*&&> = std::is_same_v<storage_type, void*>;
+		template <typename... Args>
+		static constexpr bool is_nothrow_constructible<forwarder<Args...>&&> = is_constructible<Args...>;
+
+	  private:
+		template <typename... Args, size_t... Indices>
+		SOAGEN_ATTR(nonnull)
+		static constexpr storage_type& construct_from_forwarder(std::byte* destination,
+																forwarder<Args...>&& args,
+																std::index_sequence<Indices...>) //
+			noexcept(is_nothrow_constructible<Args...>)
+		{
+			static_assert(sizeof...(Args) == sizeof...(Indices));
+			static_assert((std::is_reference_v<Args> && ...));
+
+			if constexpr (std::is_aggregate_v<storage_type>)
+			{
+				return *(
+					::new (static_cast<void*>(soagen::assume_aligned<alignof(storage_type)>(destination)))
+						storage_type{ static_cast<Args>(
+							*static_cast<std::add_pointer_t<std::remove_reference_t<Args>>>(args.ptrs[Indices]))... });
+			}
+			else
+			{
+				return *(
+					::new (static_cast<void*>(soagen::assume_aligned<alignof(storage_type)>(destination)))
+						storage_type(static_cast<Args>(
+							*static_cast<std::add_pointer_t<std::remove_reference_t<Args>>>(args.ptrs[Indices]))...));
+			}
+		}
+
+	  public:
+		template <typename... Args>
+		SOAGEN_ATTR(nonnull)
+		static constexpr storage_type& construct_from_forwarder(std::byte* destination,
+																forwarder<Args...>&& args) //
+			noexcept(is_nothrow_constructible<Args...>)
+		{
+			static_assert((std::is_reference_v<Args> && ...));
+
+			return construct_from_forwarder(destination,
+											static_cast<forwarder<Args...>&&>(args),
+											std::make_index_sequence<sizeof...(Args)>{});
+		}
+
+		SOAGEN_CONSTRAINED_TEMPLATE(is_constructible<Args&&...>, typename... Args)
 		SOAGEN_ATTR(nonnull)
 		static constexpr storage_type& construct(std::byte* destination, Args&&... args) //
-			noexcept(std::is_nothrow_constructible_v<storage_type, Args&&...>)
+			noexcept(is_nothrow_constructible<Args&&...>)
 		{
 			SOAGEN_ASSUME(destination != nullptr);
 
@@ -2203,7 +2352,19 @@ namespace soagen::detail
 			}
 			else
 			{
-				if constexpr (std::is_aggregate_v<storage_type>)
+				if constexpr (sizeof...(Args) == 1										   //
+							  && (std::is_pointer_v<std::remove_reference_t<Args>> && ...) //
+							  && std::is_same_v<storage_type, void*>)
+				{
+					return *(
+						::new (static_cast<void*>(soagen::assume_aligned<alignof(storage_type)>(destination)))
+							storage_type{ const_cast<storage_type>(reinterpret_cast<const volatile void*>(args))... });
+				}
+				else if constexpr (sizeof...(Args) == 1 && (is_forwarder<std::remove_reference_t<Args>> && ...))
+				{
+					return construct_from_forwarder(destination, static_cast<Args&&>(args)...);
+				}
+				else if constexpr (std::is_aggregate_v<storage_type>)
 				{
 					return *(::new (static_cast<void*>(soagen::assume_aligned<alignof(storage_type)>(destination)))
 								 storage_type{ static_cast<Args&&>(args)... });
@@ -2216,10 +2377,10 @@ namespace soagen::detail
 			}
 		}
 
-		template <typename... Args>
+		SOAGEN_CONSTRAINED_TEMPLATE(is_constructible<Args&&...>, typename... Args)
 		SOAGEN_ATTR(nonnull)
 		static constexpr storage_type& construct_at(std::byte* buffer, size_t element_index, Args&&... args) //
-			noexcept(std::is_nothrow_constructible_v<storage_type, Args&&...>)
+			noexcept(is_nothrow_constructible<Args&&...>)
 		{
 			SOAGEN_ASSUME(buffer != nullptr);
 
@@ -2577,73 +2738,14 @@ namespace soagen::detail
 						 count * sizeof(storage_type));
 		}
 	};
-
-	// trait for determining the actual storage type for a column.
-	// we can strip off const/volatile and coerce all pointers to be void* to reduce template instantiation burden
-	template <typename ValueType>
-	struct storage_type_
-	{
-		using type = ValueType;
-	};
-	template <typename T>
-	struct storage_type_<T*>
-	{
-		using type = void*;
-	};
-	template <typename T>
-	struct storage_type_<const T*> : public storage_type_<T*>
-	{};
-	template <typename T>
-	struct storage_type_<volatile T*> : public storage_type_<T*>
-	{};
-	template <typename T>
-	struct storage_type_<const volatile T*> : public storage_type_<T*>
-	{};
-	template <typename T>
-	struct storage_type_<const T> : public storage_type_<T>
-	{};
-	template <typename T>
-	struct storage_type_<volatile T> : public storage_type_<T>
-	{};
-	template <typename T>
-	struct storage_type_<const volatile T> : public storage_type_<T>
-	{};
-	template <typename ValueType>
-	using storage_type = typename detail::storage_type_<ValueType>::type;
-
-	// trait for determining the default parameter type for a column.
-	// ideally we want to pass small+fast things by value, move-only things by rvalue,
-	// and everything else as const lvalue.
-	template <typename ValueType,
-			  bool Value = std::is_scalar_v<ValueType>		//
-						|| std::is_fundamental_v<ValueType> //
-						|| (std::is_trivially_copyable_v<ValueType> && sizeof(ValueType) <= sizeof(void*) * 2),
-			  bool Move = !std::is_copy_constructible_v<ValueType> && std::is_move_constructible_v<ValueType>>
-	struct param_type_
-	{
-		using type = ValueType;
-	};
-	template <typename ValueType>
-	struct param_type_<ValueType, false, true>
-	{
-		using type = std::add_rvalue_reference_t<ValueType>;
-	};
-	template <typename ValueType>
-	struct param_type_<ValueType, false, false>
-	{
-		using type = std::add_lvalue_reference_t<std::add_const_t<ValueType>>;
-	};
 }
 
 namespace soagen
 {
-	template <typename ValueType>
-	using param_type = typename detail::param_type_<ValueType>::type;
-
 	template <typename ValueType,
 			  typename ParamType = param_type<ValueType>,
 			  size_t Align		 = alignof(ValueType),
-			  typename Base		 = detail::column_traits_base<detail::storage_type<ValueType>>>
+			  typename Base		 = detail::column_traits_base<storage_type<ValueType>>>
 	struct column_traits : public Base
 	{
 		using value_type = ValueType;
@@ -2852,11 +2954,11 @@ namespace soagen::detail
 
 		template <typename... Args>
 		static constexpr bool row_constructible_from =
-			sizeof...(Args) == column_count && (std::is_constructible_v<typename Columns::storage_type, Args> && ...);
+			sizeof...(Args) == column_count && (Columns::template is_constructible<Args> && ...);
 
 		template <typename... Args>
 		static constexpr bool row_nothrow_constructible_from =
-			sizeof...(Args) == column_count && (std::is_constructible_v<typename Columns::storage_type, Args> && ...);
+			sizeof...(Args) == column_count && (Columns::template is_nothrow_constructible<Args> && ...);
 
 		//--- trivially-copy (memmove) ---------------------------------------------------------------------------------
 
@@ -3563,7 +3665,7 @@ namespace soagen
 
 		static constexpr size_t column_alignments[column_count] = { Columns::alignment... };
 
-		static constexpr size_t largest_alignment = max(Columns::alignment...);
+		static constexpr size_t largest_alignment = max(size_t{ 1 }, Columns::alignment...);
 	};
 
 	template <typename>
@@ -3635,6 +3737,17 @@ SOAGEN_DISABLE_SPAM_WARNINGS;
 
 namespace soagen::detail
 {
+	SOAGEN_CONSTRAINED_TEMPLATE(is_unsigned<T>, typename T)
+	SOAGEN_PURE_GETTER
+	constexpr bool add_without_overflowing(T lhs, T rhs, T& result) noexcept
+	{
+		if (lhs > static_cast<T>(-1) - rhs)
+			return false;
+
+		result = lhs + rhs;
+		return true;
+	};
+
 	//------------------------------------------------------------------------------------------------------------------
 	// generic allocation class for tracking the column pointers and the actual size in bytes
 	//------------------------------------------------------------------------------------------------------------------
@@ -4003,8 +4116,6 @@ namespace soagen::detail
 
 		static constexpr void calc_column_ends(column_ends& ends, size_t capacity) noexcept
 		{
-			SOAGEN_ASSUME(capacity % TableTraits::aligned_stride == 0u);
-
 			// pad ends so the next column starts at the right alignment for the storage type
 			size_t prev = {};
 			for (size_t i = 0; i < TableTraits::column_count - 1u; i++)
@@ -4049,7 +4160,6 @@ namespace soagen::detail
 		{
 			SOAGEN_ASSUME(new_capacity);
 			SOAGEN_ASSUME(new_capacity >= Base::count_);
-			SOAGEN_ASSUME(new_capacity % TableTraits::aligned_stride == 0u);
 
 			if (new_capacity == Base::capacity())
 				return;
@@ -4158,7 +4268,7 @@ namespace soagen::detail
 							  "column storage_types must be nothrow-destructible");
 
 				if (Base::count_)
-					TableTraits::destruct_rows(Base::alloc_, {}, Base::count_);
+					TableTraits::destruct_rows(Base::alloc_.columns, {}, Base::count_);
 			}
 			Base::count_ = {};
 		}
@@ -4170,7 +4280,10 @@ namespace soagen::detail
 				return;
 
 			if (const size_t rem = new_capacity % TableTraits::aligned_stride; rem > 0u)
-				new_capacity += TableTraits::aligned_stride - rem;
+			{
+				static_cast<void>(
+					add_without_overflowing(new_capacity, TableTraits::aligned_stride - rem, new_capacity));
+			}
 			if (new_capacity <= Base::capacity())
 				return;
 
@@ -4193,7 +4306,10 @@ namespace soagen::detail
 
 			auto new_capacity = Base::count_;
 			if (const size_t rem = new_capacity % TableTraits::aligned_stride; rem > 0u)
-				new_capacity += TableTraits::aligned_stride - rem;
+			{
+				static_cast<void>(
+					add_without_overflowing(new_capacity, TableTraits::aligned_stride - rem, new_capacity));
+			}
 			if (new_capacity == Base::capacity())
 				return;
 			SOAGEN_ASSERT(new_capacity < Base::capacity());
@@ -4225,15 +4341,6 @@ namespace soagen::detail
 
 				constexpr auto capacity_ok = [](size_t cap) noexcept
 				{
-					constexpr auto add_without_overflowing = [](size_t lhs, size_t rhs, size_t& result) noexcept -> bool
-					{
-						if (lhs > static_cast<size_t>(-1) - rhs)
-							return false;
-
-						result = lhs + rhs;
-						return true;
-					};
-
 					size_t buf_end = {};
 					for (size_t i = 0u; i < TableTraits::column_count; i++)
 					{
@@ -4283,6 +4390,33 @@ namespace soagen::detail
 		constexpr size_t max_size() const noexcept
 		{
 			return max_capacity;
+		}
+
+	  private:
+		SOAGEN_CPP20_CONSTEXPR
+		void grow_if_necessary(size_t new_elements) noexcept(noexcept(this->reserve(size_t{})))
+		{
+			const auto new_size = Base::size() + new_elements; // todo: throw if this would overflow?
+			if (new_size <= Base::capacity())
+				return;
+
+			auto new_cap = new_size;
+			if (!add_without_overflowing(new_cap, new_cap, new_cap)) // new_cap *= 2
+				new_cap = max_capacity;
+
+			reserve(new_cap);
+		}
+
+	  public:
+		SOAGEN_CONSTRAINED_TEMPLATE(TableTraits::template row_constructible_from<Args&&...>, typename... Args)
+		SOAGEN_CPP20_CONSTEXPR
+		void emplace_back(Args&&... args) noexcept(							//
+			TableTraits::template row_nothrow_constructible_from<Args&&...> //
+				&& noexcept(this->grow_if_necessary(size_t{})))
+		{
+			grow_if_necessary(1u);
+			TableTraits::construct_row(Base::alloc_.columns, Base::count_, static_cast<Args&&>(args)...);
+			Base::count_++;
 		}
 	};
 

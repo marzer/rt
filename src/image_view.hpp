@@ -2,7 +2,7 @@
 #include "common.hpp"
 namespace rt
 {
-	class image_view
+	class MUU_TRIVIAL_ABI image_view
 	{
 	  public:
 		using pixel_type = uint32_t;
@@ -13,10 +13,10 @@ namespace rt
 
 	  public:
 		MUU_NODISCARD_CTOR
-		image_view() noexcept = default;
+		constexpr image_view() noexcept = default;
 
 		MUU_NODISCARD_CTOR
-		image_view(const image_view&) noexcept = default;
+		constexpr image_view(const image_view&) noexcept = default;
 
 		MUU_NODISCARD_CTOR
 		image_view(pixel_type* img, vec2u sz) noexcept //
@@ -24,7 +24,7 @@ namespace rt
 			  size_{ sz }
 		{}
 
-		image_view& operator=(const image_view&) noexcept = default;
+		constexpr image_view& operator=(const image_view&) noexcept = default;
 
 		~image_view() noexcept = default;
 

@@ -1,8 +1,8 @@
 namespace = 'rt'
 doxygen = false
+# allocator = 'std::allocator<unsigned char>'
 
 [structs.spheres]
-static_variables = [{name = 'kek', value = [1, 2.0, "3"]}]
 variables = [
 	{ name = 'center_x', type = 'float', alignment = 32 },
 	{ name = 'center_y', type = 'float', alignment = 32 },
@@ -10,12 +10,20 @@ variables = [
 	{ name = 'radius',   type = 'float', alignment = 32 },
 ]
 
-[structs.vertices]
+[structs.boxes]
 variables = [
-	{ name = 'position_x', type = 'float', alignment = 32 },
-	{ name = 'position_y', type = 'float', alignment = 32 },
-	{ name = 'position_z', type = 'float', alignment = 32 },
-	{ name = 'normal_x',   type = 'float', alignment = 32 },
-	{ name = 'normal_y',   type = 'float', alignment = 32 },
-	{ name = 'normal_z',   type = 'float', alignment = 32 },
+	{ name = 'center_x', type = 'float', alignment = 32 },
+	{ name = 'center_y', type = 'float', alignment = 32 },
+	{ name = 'center_z', type = 'float', alignment = 32 },
+	{ name = 'extents_x', type = 'float', alignment = 32 },
+	{ name = 'extents_y', type = 'float', alignment = 32 },
+	{ name = 'extents_z', type = 'float', alignment = 32 },
+]
+
+[structs.planes]
+variables = [
+	{ name = 'normal_x', type = 'float', alignment = 32 },
+	{ name = 'normal_y', type = 'float', alignment = 32 },
+	{ name = 'normal_z', type = 'float', alignment = 32 },
+	{ name = 'd', type = 'float', alignment = 32 },
 ]

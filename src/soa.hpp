@@ -6,10 +6,6 @@
 
 #include <soagen.hpp>
 
-SOAGEN_DISABLE_WARNINGS;
-#include <tuple>
-SOAGEN_ENABLE_WARNINGS;
-
 SOAGEN_PUSH_WARNINGS;
 SOAGEN_DISABLE_SPAM_WARNINGS;
 #if SOAGEN_MSVC
@@ -28,9 +24,646 @@ SOAGEN_DISABLE_SPAM_WARNINGS;
 
 namespace rt
 {
+	class boxes;
+	class planes;
 	class spheres;
+}
 
-	class vertices;
+//----------------------------------------------------------------------------------------------------------------------
+// boxes
+//----------------------------------------------------------------------------------------------------------------------
+
+namespace rt
+{
+	class boxes
+	{
+	  private:
+		template <typename ValueType,
+				  typename ParamType = soagen::param_type<ValueType>,
+				  size_t Align		 = alignof(ValueType)>
+		using make_col = soagen::column_traits<ValueType, ParamType, soagen::max(Align, alignof(ValueType))>;
+
+	  public:
+		using size_type		  = std::size_t;
+		using difference_type = std::ptrdiff_t;
+		using allocator_type  = soagen::allocator;
+
+		using table_traits = soagen::table_traits<
+			/*	center_x */ make_col<float, soagen::param_type<float>, 32>,
+			/*	center_y */ make_col<float, soagen::param_type<float>, 32>,
+			/*	center_z */ make_col<float, soagen::param_type<float>, 32>,
+			/* extents_x */ make_col<float, soagen::param_type<float>, 32>,
+			/* extents_y */ make_col<float, soagen::param_type<float>, 32>,
+			/* extents_z */ make_col<float, soagen::param_type<float>, 32>>;
+
+		template <size_type I>
+		using column_traits = typename table_traits::template column<I>;
+
+		template <size_type I>
+		using column_type = typename column_traits<I>::value_type;
+
+		static constexpr size_type aligned_stride = table_traits::aligned_stride;
+
+		struct column_indices
+		{
+			static constexpr size_type center_x	 = 0;
+			static constexpr size_type center_y	 = 1;
+			static constexpr size_type center_z	 = 2;
+			static constexpr size_type extents_x = 3;
+			static constexpr size_type extents_y = 4;
+			static constexpr size_type extents_z = 5;
+		};
+
+	  private:
+		// clang-format off
+			template <size_type> struct column_name_{};
+			template <> struct column_name_<0>{  static constexpr auto value = "center_x"; };
+			template <> struct column_name_<1>{  static constexpr auto value = "center_y"; };
+			template <> struct column_name_<2>{  static constexpr auto value = "center_z"; };
+			template <> struct column_name_<3>{  static constexpr auto value = "extents_x"; };
+			template <> struct column_name_<4>{  static constexpr auto value = "extents_y"; };
+			template <> struct column_name_<5>{  static constexpr auto value = "extents_z"; };
+		// clang-format on
+
+	  public:
+		template <size_type I>
+		static constexpr auto& column_name = column_name_<I>::value;
+
+	  private:
+		using table_type = soagen::table<table_traits, allocator_type>;
+		table_type table_;
+
+	  public:
+		SOAGEN_NODISCARD_CTOR
+		boxes() = default;
+
+		SOAGEN_NODISCARD_CTOR
+		boxes(const boxes&) = default;
+
+		SOAGEN_NODISCARD_CTOR
+		boxes(boxes&&) = default;
+
+		boxes& operator=(const boxes&) = default;
+
+		boxes& operator=(boxes&&) = default;
+
+		~boxes() = default;
+
+		SOAGEN_NODISCARD_CTOR
+		constexpr explicit boxes(const allocator_type& alloc) noexcept //
+			: table_{ alloc }
+		{}
+
+		SOAGEN_NODISCARD_CTOR
+		constexpr explicit boxes(allocator_type&& alloc) noexcept //
+			: table_{ static_cast<allocator_type&&>(alloc) }
+		{}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		constexpr std::byte* data() noexcept
+		{
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
+				table_.data());
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		constexpr const std::byte* data() const noexcept
+		{
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
+				table_.data());
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type size() const noexcept
+		{
+			return table_.size();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type max_size() const noexcept
+		{
+			return table_.max_size();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr bool empty() const noexcept
+		{
+			return table_.empty();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type capacity() const noexcept
+		{
+			return table_.capacity();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void clear() noexcept
+		{
+			return table_.clear();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void reserve(size_type new_cap) noexcept(noexcept(std::declval<table_type&>().reserve(size_type{})))
+		{
+			table_.reserve(new_cap);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_resize_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void resize(size_type new_size) noexcept(soagen::has_nothrow_resize_member<table_type, size_type>)
+		{
+			table_.resize(new_size);
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void shrink_to_fit() noexcept(noexcept(std::declval<table_type&>().shrink_to_fit()))
+		{
+			table_.shrink_to_fit();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void push_back(column_traits<0>::param_type center_x,
+					   column_traits<1>::param_type center_y,
+					   column_traits<2>::param_type center_z,
+					   column_traits<3>::param_type extents_x,
+					   column_traits<4>::param_type extents_y,
+					   column_traits<5>::param_type extents_z) //
+			noexcept(noexcept(std::declval<table_type&>().emplace_back(std::declval<column_traits<0>::param_type&&>(),
+																	   std::declval<column_traits<1>::param_type&&>(),
+																	   std::declval<column_traits<2>::param_type&&>(),
+																	   std::declval<column_traits<3>::param_type&&>(),
+																	   std::declval<column_traits<4>::param_type&&>(),
+																	   std::declval<column_traits<5>::param_type&&>())))
+		{
+			table_.emplace_back(static_cast<column_traits<0>::param_type&&>(center_x),
+								static_cast<column_traits<1>::param_type&&>(center_y),
+								static_cast<column_traits<2>::param_type&&>(center_z),
+								static_cast<column_traits<3>::param_type&&>(extents_x),
+								static_cast<column_traits<4>::param_type&&>(extents_y),
+								static_cast<column_traits<5>::param_type&&>(extents_z));
+		}
+
+		template <typename... CenterX,
+				  typename... CenterY,
+				  typename... CenterZ,
+				  typename... ExtentsX,
+				  typename... ExtentsY,
+				  typename... ExtentsZ>
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void emplace_back(soagen::forwarder<CenterX...>&& center_x,
+						  soagen::forwarder<CenterY...>&& center_y,
+						  soagen::forwarder<CenterZ...>&& center_z,
+						  soagen::forwarder<ExtentsX...>&& extents_x,
+						  soagen::forwarder<ExtentsY...>&& extents_y,
+						  soagen::forwarder<ExtentsZ...>&& extents_z) //
+		{
+			table_.emplace_back(static_cast<soagen::forwarder<CenterX...>&&>(center_x),
+								static_cast<soagen::forwarder<CenterY...>&&>(center_y),
+								static_cast<soagen::forwarder<CenterZ...>&&>(center_z),
+								static_cast<soagen::forwarder<ExtentsX...>&&>(extents_x),
+								static_cast<soagen::forwarder<ExtentsY...>&&>(extents_y),
+								static_cast<soagen::forwarder<ExtentsZ...>&&>(extents_z));
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void pop_back(size_type num = 1) noexcept(noexcept(std::declval<table_type&>().pop_back(size_type{})))
+		{
+			table_.pop_back(num);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_erase_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void erase(size_type pos) noexcept(soagen::has_nothrow_erase_member<table_type, size_type>)
+		{
+			table_.erase(pos);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_unordered_erase_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void unordered_erase(size_type pos) noexcept(soagen::has_nothrow_unordered_erase_member<table_type, size_type>)
+		{
+			table_.unordered_erase(pos);
+		}
+
+		SOAGEN_INLINE_GETTER
+		constexpr allocator_type get_allocator() const noexcept
+		{
+			return table_.get_allocator();
+		}
+
+		template <size_t I>
+		SOAGEN_ALIGNED_COLUMN(I)
+		column_type<I>* column() noexcept
+		{
+			static_assert(I < table_traits::column_count, "column index out of range");
+
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
+				table_.template column<I>());
+		}
+
+		template <size_t I>
+		SOAGEN_ALIGNED_COLUMN(I)
+		std::add_const_t<column_type<I>>* column() const noexcept
+		{
+			static_assert(I < table_traits::column_count, "column index out of range");
+
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
+				table_.template column<I>());
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		float* center_x() noexcept
+		{
+			return column<0>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		const float* center_x() const noexcept
+		{
+			return column<0>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(1)
+		float* center_y() noexcept
+		{
+			return column<1>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(1)
+		const float* center_y() const noexcept
+		{
+			return column<1>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(2)
+		float* center_z() noexcept
+		{
+			return column<2>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(2)
+		const float* center_z() const noexcept
+		{
+			return column<2>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(3)
+		float* extents_x() noexcept
+		{
+			return column<3>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(3)
+		const float* extents_x() const noexcept
+		{
+			return column<3>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(4)
+		float* extents_y() noexcept
+		{
+			return column<4>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(4)
+		const float* extents_y() const noexcept
+		{
+			return column<4>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(5)
+		float* extents_z() noexcept
+		{
+			return column<5>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(5)
+		const float* extents_z() const noexcept
+		{
+			return column<5>();
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<table_type>)
+		SOAGEN_ALWAYS_INLINE
+		constexpr void swap(boxes& other) noexcept(soagen::has_nothrow_swap_member<table_type>)
+		{
+			table_.swap(other.table_);
+		}
+	};
+
+	SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<boxes>)
+	SOAGEN_ALWAYS_INLINE
+	constexpr void swap(boxes& lhs, boxes& rhs) //
+		noexcept(soagen::has_nothrow_swap_member<boxes>)
+	{
+		lhs.swap(rhs);
+	}
+}
+
+//----------------------------------------------------------------------------------------------------------------------
+// planes
+//----------------------------------------------------------------------------------------------------------------------
+
+namespace rt
+{
+	class planes
+	{
+	  private:
+		template <typename ValueType,
+				  typename ParamType = soagen::param_type<ValueType>,
+				  size_t Align		 = alignof(ValueType)>
+		using make_col = soagen::column_traits<ValueType, ParamType, soagen::max(Align, alignof(ValueType))>;
+
+	  public:
+		using size_type		  = std::size_t;
+		using difference_type = std::ptrdiff_t;
+		using allocator_type  = soagen::allocator;
+
+		using table_traits = soagen::table_traits<
+			/* normal_x */ make_col<float, soagen::param_type<float>, 32>,
+			/* normal_y */ make_col<float, soagen::param_type<float>, 32>,
+			/* normal_z */ make_col<float, soagen::param_type<float>, 32>,
+			/*		  d */ make_col<float, soagen::param_type<float>, 32>>;
+
+		template <size_type I>
+		using column_traits = typename table_traits::template column<I>;
+
+		template <size_type I>
+		using column_type = typename column_traits<I>::value_type;
+
+		static constexpr size_type aligned_stride = table_traits::aligned_stride;
+
+		struct column_indices
+		{
+			static constexpr size_type normal_x = 0;
+			static constexpr size_type normal_y = 1;
+			static constexpr size_type normal_z = 2;
+			static constexpr size_type d		= 3;
+		};
+
+	  private:
+		// clang-format off
+			template <size_type> struct column_name_{};
+			template <> struct column_name_<0>{  static constexpr auto value = "normal_x"; };
+			template <> struct column_name_<1>{  static constexpr auto value = "normal_y"; };
+			template <> struct column_name_<2>{  static constexpr auto value = "normal_z"; };
+			template <> struct column_name_<3>{  static constexpr auto value = "d"; };
+		// clang-format on
+
+	  public:
+		template <size_type I>
+		static constexpr auto& column_name = column_name_<I>::value;
+
+	  private:
+		using table_type = soagen::table<table_traits, allocator_type>;
+		table_type table_;
+
+	  public:
+		SOAGEN_NODISCARD_CTOR
+		planes() = default;
+
+		SOAGEN_NODISCARD_CTOR
+		planes(const planes&) = default;
+
+		SOAGEN_NODISCARD_CTOR
+		planes(planes&&) = default;
+
+		planes& operator=(const planes&) = default;
+
+		planes& operator=(planes&&) = default;
+
+		~planes() = default;
+
+		SOAGEN_NODISCARD_CTOR
+		constexpr explicit planes(const allocator_type& alloc) noexcept //
+			: table_{ alloc }
+		{}
+
+		SOAGEN_NODISCARD_CTOR
+		constexpr explicit planes(allocator_type&& alloc) noexcept //
+			: table_{ static_cast<allocator_type&&>(alloc) }
+		{}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		constexpr std::byte* data() noexcept
+		{
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
+				table_.data());
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		constexpr const std::byte* data() const noexcept
+		{
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
+				table_.data());
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type size() const noexcept
+		{
+			return table_.size();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type max_size() const noexcept
+		{
+			return table_.max_size();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr bool empty() const noexcept
+		{
+			return table_.empty();
+		}
+
+		SOAGEN_PURE_INLINE_GETTER
+		constexpr size_type capacity() const noexcept
+		{
+			return table_.capacity();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void clear() noexcept
+		{
+			return table_.clear();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void reserve(size_type new_cap) noexcept(noexcept(std::declval<table_type&>().reserve(size_type{})))
+		{
+			table_.reserve(new_cap);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_resize_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void resize(size_type new_size) noexcept(soagen::has_nothrow_resize_member<table_type, size_type>)
+		{
+			table_.resize(new_size);
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void shrink_to_fit() noexcept(noexcept(std::declval<table_type&>().shrink_to_fit()))
+		{
+			table_.shrink_to_fit();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void push_back(column_traits<0>::param_type normal_x,
+					   column_traits<1>::param_type normal_y,
+					   column_traits<2>::param_type normal_z,
+					   column_traits<3>::param_type d) //
+			noexcept(noexcept(std::declval<table_type&>().emplace_back(std::declval<column_traits<0>::param_type&&>(),
+																	   std::declval<column_traits<1>::param_type&&>(),
+																	   std::declval<column_traits<2>::param_type&&>(),
+																	   std::declval<column_traits<3>::param_type&&>())))
+		{
+			table_.emplace_back(static_cast<column_traits<0>::param_type&&>(normal_x),
+								static_cast<column_traits<1>::param_type&&>(normal_y),
+								static_cast<column_traits<2>::param_type&&>(normal_z),
+								static_cast<column_traits<3>::param_type&&>(d));
+		}
+
+		template <typename... NormalX, typename... NormalY, typename... NormalZ, typename... D>
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void emplace_back(soagen::forwarder<NormalX...>&& normal_x,
+						  soagen::forwarder<NormalY...>&& normal_y,
+						  soagen::forwarder<NormalZ...>&& normal_z,
+						  soagen::forwarder<D...>&& d) //
+		{
+			table_.emplace_back(static_cast<soagen::forwarder<NormalX...>&&>(normal_x),
+								static_cast<soagen::forwarder<NormalY...>&&>(normal_y),
+								static_cast<soagen::forwarder<NormalZ...>&&>(normal_z),
+								static_cast<soagen::forwarder<D...>&&>(d));
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void pop_back(size_type num = 1) noexcept(noexcept(std::declval<table_type&>().pop_back(size_type{})))
+		{
+			table_.pop_back(num);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_erase_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void erase(size_type pos) noexcept(soagen::has_nothrow_erase_member<table_type, size_type>)
+		{
+			table_.erase(pos);
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_unordered_erase_member<table_type, size_type>)
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void unordered_erase(size_type pos) noexcept(soagen::has_nothrow_unordered_erase_member<table_type, size_type>)
+		{
+			table_.unordered_erase(pos);
+		}
+
+		SOAGEN_INLINE_GETTER
+		constexpr allocator_type get_allocator() const noexcept
+		{
+			return table_.get_allocator();
+		}
+
+		template <size_t I>
+		SOAGEN_ALIGNED_COLUMN(I)
+		column_type<I>* column() noexcept
+		{
+			static_assert(I < table_traits::column_count, "column index out of range");
+
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
+				table_.template column<I>());
+		}
+
+		template <size_t I>
+		SOAGEN_ALIGNED_COLUMN(I)
+		std::add_const_t<column_type<I>>* column() const noexcept
+		{
+			static_assert(I < table_traits::column_count, "column index out of range");
+
+			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
+				table_.template column<I>());
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		float* normal_x() noexcept
+		{
+			return column<0>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(0)
+		const float* normal_x() const noexcept
+		{
+			return column<0>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(1)
+		float* normal_y() noexcept
+		{
+			return column<1>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(1)
+		const float* normal_y() const noexcept
+		{
+			return column<1>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(2)
+		float* normal_z() noexcept
+		{
+			return column<2>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(2)
+		const float* normal_z() const noexcept
+		{
+			return column<2>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(3)
+		float* d() noexcept
+		{
+			return column<3>();
+		}
+
+		SOAGEN_ALIGNED_COLUMN(3)
+		const float* d() const noexcept
+		{
+			return column<3>();
+		}
+
+		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<table_type>)
+		SOAGEN_ALWAYS_INLINE
+		constexpr void swap(planes& other) noexcept(soagen::has_nothrow_swap_member<table_type>)
+		{
+			table_.swap(other.table_);
+		}
+	};
+
+	SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<planes>)
+	SOAGEN_ALWAYS_INLINE
+	constexpr void swap(planes& lhs, planes& rhs) //
+		noexcept(soagen::has_nothrow_swap_member<planes>)
+	{
+		lhs.swap(rhs);
+	}
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -86,8 +719,6 @@ namespace rt
 	  public:
 		template <size_type I>
 		static constexpr auto& column_name = column_name_<I>::value;
-
-		static constexpr std::tuple<int, float, const char*> kek = { 1, 2.0f, "3" };
 
 	  private:
 		using table_type = soagen::table<table_traits, allocator_type>;
@@ -184,6 +815,37 @@ namespace rt
 		void shrink_to_fit() noexcept(noexcept(std::declval<table_type&>().shrink_to_fit()))
 		{
 			table_.shrink_to_fit();
+		}
+
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void push_back(column_traits<0>::param_type center_x,
+					   column_traits<1>::param_type center_y,
+					   column_traits<2>::param_type center_z,
+					   column_traits<3>::param_type radius) //
+			noexcept(noexcept(std::declval<table_type&>().emplace_back(std::declval<column_traits<0>::param_type&&>(),
+																	   std::declval<column_traits<1>::param_type&&>(),
+																	   std::declval<column_traits<2>::param_type&&>(),
+																	   std::declval<column_traits<3>::param_type&&>())))
+		{
+			table_.emplace_back(static_cast<column_traits<0>::param_type&&>(center_x),
+								static_cast<column_traits<1>::param_type&&>(center_y),
+								static_cast<column_traits<2>::param_type&&>(center_z),
+								static_cast<column_traits<3>::param_type&&>(radius));
+		}
+
+		template <typename... CenterX, typename... CenterY, typename... CenterZ, typename... Radius>
+		SOAGEN_ALWAYS_INLINE
+		SOAGEN_CPP20_CONSTEXPR
+		void emplace_back(soagen::forwarder<CenterX...>&& center_x,
+						  soagen::forwarder<CenterY...>&& center_y,
+						  soagen::forwarder<CenterZ...>&& center_z,
+						  soagen::forwarder<Radius...>&& radius) //
+		{
+			table_.emplace_back(static_cast<soagen::forwarder<CenterX...>&&>(center_x),
+								static_cast<soagen::forwarder<CenterY...>&&>(center_y),
+								static_cast<soagen::forwarder<CenterZ...>&&>(center_z),
+								static_cast<soagen::forwarder<Radius...>&&>(radius));
 		}
 
 		SOAGEN_ALWAYS_INLINE
@@ -301,311 +963,19 @@ namespace rt
 }
 
 //----------------------------------------------------------------------------------------------------------------------
-// vertices
-//----------------------------------------------------------------------------------------------------------------------
-
-namespace rt
-{
-	class vertices
-	{
-	  private:
-		template <typename ValueType,
-				  typename ParamType = soagen::param_type<ValueType>,
-				  size_t Align		 = alignof(ValueType)>
-		using make_col = soagen::column_traits<ValueType, ParamType, soagen::max(Align, alignof(ValueType))>;
-
-	  public:
-		using size_type		  = std::size_t;
-		using difference_type = std::ptrdiff_t;
-		using allocator_type  = soagen::allocator;
-
-		using table_traits = soagen::table_traits<
-			/* position_x */ make_col<float, soagen::param_type<float>, 32>,
-			/* position_y */ make_col<float, soagen::param_type<float>, 32>,
-			/* position_z */ make_col<float, soagen::param_type<float>, 32>,
-			/*	 normal_x */ make_col<float, soagen::param_type<float>, 32>,
-			/*	 normal_y */ make_col<float, soagen::param_type<float>, 32>,
-			/*	 normal_z */ make_col<float, soagen::param_type<float>, 32>>;
-
-		template <size_type I>
-		using column_traits = typename table_traits::template column<I>;
-
-		template <size_type I>
-		using column_type = typename column_traits<I>::value_type;
-
-		static constexpr size_type aligned_stride = table_traits::aligned_stride;
-
-		struct column_indices
-		{
-			static constexpr size_type position_x = 0;
-			static constexpr size_type position_y = 1;
-			static constexpr size_type position_z = 2;
-			static constexpr size_type normal_x	  = 3;
-			static constexpr size_type normal_y	  = 4;
-			static constexpr size_type normal_z	  = 5;
-		};
-
-	  private:
-		// clang-format off
-			template <size_type> struct column_name_{};
-			template <> struct column_name_<0>{  static constexpr auto value = "position_x"; };
-			template <> struct column_name_<1>{  static constexpr auto value = "position_y"; };
-			template <> struct column_name_<2>{  static constexpr auto value = "position_z"; };
-			template <> struct column_name_<3>{  static constexpr auto value = "normal_x"; };
-			template <> struct column_name_<4>{  static constexpr auto value = "normal_y"; };
-			template <> struct column_name_<5>{  static constexpr auto value = "normal_z"; };
-		// clang-format on
-
-	  public:
-		template <size_type I>
-		static constexpr auto& column_name = column_name_<I>::value;
-
-	  private:
-		using table_type = soagen::table<table_traits, allocator_type>;
-		table_type table_;
-
-	  public:
-		SOAGEN_NODISCARD_CTOR
-		vertices() = default;
-
-		SOAGEN_NODISCARD_CTOR
-		vertices(const vertices&) = default;
-
-		SOAGEN_NODISCARD_CTOR
-		vertices(vertices&&) = default;
-
-		vertices& operator=(const vertices&) = default;
-
-		vertices& operator=(vertices&&) = default;
-
-		~vertices() = default;
-
-		SOAGEN_NODISCARD_CTOR
-		constexpr explicit vertices(const allocator_type& alloc) noexcept //
-			: table_{ alloc }
-		{}
-
-		SOAGEN_NODISCARD_CTOR
-		constexpr explicit vertices(allocator_type&& alloc) noexcept //
-			: table_{ static_cast<allocator_type&&>(alloc) }
-		{}
-
-		SOAGEN_ALIGNED_COLUMN(0)
-		constexpr std::byte* data() noexcept
-		{
-			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
-				table_.data());
-		}
-
-		SOAGEN_ALIGNED_COLUMN(0)
-		constexpr const std::byte* data() const noexcept
-		{
-			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, 0>>(
-				table_.data());
-		}
-
-		SOAGEN_PURE_INLINE_GETTER
-		constexpr size_type size() const noexcept
-		{
-			return table_.size();
-		}
-
-		SOAGEN_PURE_INLINE_GETTER
-		constexpr size_type max_size() const noexcept
-		{
-			return table_.max_size();
-		}
-
-		SOAGEN_PURE_INLINE_GETTER
-		constexpr bool empty() const noexcept
-		{
-			return table_.empty();
-		}
-
-		SOAGEN_PURE_INLINE_GETTER
-		constexpr size_type capacity() const noexcept
-		{
-			return table_.capacity();
-		}
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void clear() noexcept
-		{
-			return table_.clear();
-		}
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void reserve(size_type new_cap) noexcept(noexcept(std::declval<table_type&>().reserve(size_type{})))
-		{
-			table_.reserve(new_cap);
-		}
-
-		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_resize_member<table_type, size_type>)
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void resize(size_type new_size) noexcept(soagen::has_nothrow_resize_member<table_type, size_type>)
-		{
-			table_.resize(new_size);
-		}
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void shrink_to_fit() noexcept(noexcept(std::declval<table_type&>().shrink_to_fit()))
-		{
-			table_.shrink_to_fit();
-		}
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void pop_back(size_type num = 1) noexcept(noexcept(std::declval<table_type&>().pop_back(size_type{})))
-		{
-			table_.pop_back(num);
-		}
-
-		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_erase_member<table_type, size_type>)
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void erase(size_type pos) noexcept(soagen::has_nothrow_erase_member<table_type, size_type>)
-		{
-			table_.erase(pos);
-		}
-
-		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_unordered_erase_member<table_type, size_type>)
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void unordered_erase(size_type pos) noexcept(soagen::has_nothrow_unordered_erase_member<table_type, size_type>)
-		{
-			table_.unordered_erase(pos);
-		}
-
-		SOAGEN_INLINE_GETTER
-		constexpr allocator_type get_allocator() const noexcept
-		{
-			return table_.get_allocator();
-		}
-
-		template <size_t I>
-		SOAGEN_ALIGNED_COLUMN(I)
-		column_type<I>* column() noexcept
-		{
-			static_assert(I < table_traits::column_count, "column index out of range");
-
-			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
-				table_.template column<I>());
-		}
-
-		template <size_t I>
-		SOAGEN_ALIGNED_COLUMN(I)
-		std::add_const_t<column_type<I>>* column() const noexcept
-		{
-			static_assert(I < table_traits::column_count, "column index out of range");
-
-			return soagen::assume_aligned<soagen::detail::actual_column_alignment<table_traits, allocator_type, I>>(
-				table_.template column<I>());
-		}
-
-		SOAGEN_ALIGNED_COLUMN(0)
-		float* position_x() noexcept
-		{
-			return column<0>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(0)
-		const float* position_x() const noexcept
-		{
-			return column<0>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(1)
-		float* position_y() noexcept
-		{
-			return column<1>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(1)
-		const float* position_y() const noexcept
-		{
-			return column<1>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(2)
-		float* position_z() noexcept
-		{
-			return column<2>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(2)
-		const float* position_z() const noexcept
-		{
-			return column<2>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(3)
-		float* normal_x() noexcept
-		{
-			return column<3>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(3)
-		const float* normal_x() const noexcept
-		{
-			return column<3>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(4)
-		float* normal_y() noexcept
-		{
-			return column<4>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(4)
-		const float* normal_y() const noexcept
-		{
-			return column<4>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(5)
-		float* normal_z() noexcept
-		{
-			return column<5>();
-		}
-
-		SOAGEN_ALIGNED_COLUMN(5)
-		const float* normal_z() const noexcept
-		{
-			return column<5>();
-		}
-
-		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<table_type>)
-		SOAGEN_ALWAYS_INLINE
-		constexpr void swap(vertices& other) noexcept(soagen::has_nothrow_swap_member<table_type>)
-		{
-			table_.swap(other.table_);
-		}
-	};
-
-	SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = soagen::has_swap_member<vertices>)
-	SOAGEN_ALWAYS_INLINE
-	constexpr void swap(vertices& lhs, vertices& rhs) //
-		noexcept(soagen::has_nothrow_swap_member<vertices>)
-	{
-		lhs.swap(rhs);
-	}
-}
-
-//----------------------------------------------------------------------------------------------------------------------
 // template specializations
 //----------------------------------------------------------------------------------------------------------------------
 
 namespace soagen
 {
 	template <>
-	inline constexpr bool is_soa<rt::spheres> = true;
+	inline constexpr bool is_soa<rt::boxes> = true;
 
 	template <>
-	inline constexpr bool is_soa<rt::vertices> = true;
+	inline constexpr bool is_soa<rt::planes> = true;
+
+	template <>
+	inline constexpr bool is_soa<rt::spheres> = true;
 }
 
 #if SOAGEN_MSVC_LIKE

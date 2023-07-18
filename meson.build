@@ -207,5 +207,6 @@ subproject_overrides = [ 'werror=false', 'warning_level=1', 'default_library=sta
 # subdirectories + files
 #-----------------------------------------------------------------------------------------------------------------------
 
+subdir('scenes')
 subdir('src')
 

@@ -5,19 +5,60 @@ MUU_DISABLE_WARNINGS;
 #include <chrono>
 #include <SDL.h>
 #include <string>
+#include <atomic>
+#include <mutex>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
 
-window::window(std::string_view title, vec2u size)
-	: size_{ size },
-	  handles_{ SDL_CreateWindow(std::string(title).c_str(),
-								 SDL_WINDOWPOS_CENTERED,
-								 SDL_WINDOWPOS_CENTERED,
-								 static_cast<int>(size.x),
-								 static_cast<int>(size.y),
-								 SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI) }
+namespace
 {
+	static std::mutex sdl_mx;
+	static std::atomic_bool sdl_initialized = false;
+
+	void sdl_shutdown() noexcept
+	{
+		if (!sdl_initialized)
+			return;
+
+		const auto lock = std::scoped_lock{ sdl_mx };
+		if (!sdl_initialized)
+			return;
+
+		SDL_Quit();
+		sdl_initialized = false;
+	}
+
+	void sdl_initialize()
+	{
+		if (sdl_initialized)
+			return;
+
+		const auto lock = std::scoped_lock{ sdl_mx };
+		if (sdl_initialized)
+			return;
+
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0)
+			throw std::runtime_error{ SDL_GetError() };
+		sdl_initialized = true;
+
+		std::atexit([]() { sdl_shutdown(); });
+		std::at_quick_exit([]() { sdl_shutdown(); });
+	}
+
+}
+
+window::window(std::string_view title, vec2u size) //
+	: size_{ size }
+{
+	sdl_initialize();
+
+	handles_[0] = SDL_CreateWindow(std::string(title).c_str(),
+								   SDL_WINDOWPOS_CENTERED,
+								   SDL_WINDOWPOS_CENTERED,
+								   static_cast<int>(size.x),
+								   static_cast<int>(size.y),
+								   SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
 
@@ -65,7 +106,7 @@ window::operator bool() const noexcept
 	return true;
 }
 
-void window::loop(const window_events& ev)
+void window::loop(const events& ev)
 {
 	using clock	   = std::chrono::steady_clock;
 	auto prev_time = clock::now();
@@ -107,17 +148,6 @@ void window::loop(const window_events& ev)
 
 		SDL_RenderPresent(static_cast<SDL_Renderer*>(handles_[1]));
 	}
-}
-
-void window::subsystem_initialize()
-{
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS) < 0)
-		throw std::runtime_error{ SDL_GetError() };
-}
-
-void window::subsystem_shutdown() noexcept
-{
-	SDL_Quit();
 }
 
 void window::error_message_box(const char* title, const char* msg, const window* parent) noexcept
