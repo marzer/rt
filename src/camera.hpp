@@ -7,8 +7,11 @@ namespace rt
 	{
 		vec3 position;
 		vec2u size;
-		float near_clip;
-		float far_clip;
+		struct clip_plane
+		{
+			float distance;
+			rt::plane plane;
+		} near_clip, far_clip;
 		mat4 view;
 		mat4 projection;
 		mat4 view_projection;
@@ -104,10 +107,12 @@ namespace rt
 		MUU_PURE_GETTER
 		constexpr rt::viewport viewport(vec2u size) const noexcept
 		{
+			const auto dir = rot_.transform_direction(vec3::constants::forward);
+
 			rt::viewport vp{ .position	 = pos_, //
 							 .size		 = size,
-							 .near_clip	 = near_,
-							 .far_clip	 = far_,
+							 .near_clip	 = { near_, plane{ pos_ + dir * near_, dir } },
+							 .far_clip	 = { far_, plane{ pos_ + dir * far_, -dir } },
 							 .view		 = mat4::invert(mat4::from_translation(pos_) * mat4::from_3d_rotation(rot_)),
 							 .projection = mat4::perspective_projection(vfov_, vec2{ size }, near_, far_) };
 
