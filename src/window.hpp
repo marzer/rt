@@ -1,15 +1,17 @@
 #pragma once
 #include "common.hpp"
+#include "back_buffer.hpp"
 MUU_DISABLE_WARNINGS;
 #include <functional>
 MUU_ENABLE_WARNINGS;
 
 namespace rt
 {
-	struct events
+	struct window_events
 	{
-		std::function<bool()> should_quit;
-		std::function<void(float)> update;
+		std::function<void(int)> key_down;
+		std::function<void(int)> key_up;
+		std::function<bool(float /* delta_time */, bool& /* backbuffer_dirty */)> update;
 		std::function<void(image_view)> render;
 	};
 
@@ -17,7 +19,8 @@ namespace rt
 	{
 	  private:
 		vec2u size_					  = {};
-		std::array<void*, 3> handles_ = {};
+		std::array<void*, 2> handles_ = {};
+		back_buffer back_buffer_;
 
 	  public:
 		window() noexcept = default;
@@ -32,10 +35,17 @@ namespace rt
 
 		~window() noexcept;
 
-		MUU_PURE_GETTER
-		explicit operator bool() const noexcept;
+		MUU_PURE_INLINE_GETTER
+		explicit operator bool() const noexcept
+		{
+			return handles_[0]	//
+				&& handles_[1]	//
+				&& back_buffer_ //
+				&& size_.x > 0	//
+				&& size_.y > 0;
+		}
 
-		void loop(const events& ev);
+		void loop(const window_events& ev);
 
 		static void error_message_box(const char* title, const char* msg, const window* = nullptr) noexcept;
 	};

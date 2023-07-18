@@ -1,5 +1,9 @@
 camera = { position = [0, 1, 0], direction = [0, 0, -1] }
 
+planes = [
+	{} # ground plane is default
+]
+
 spheres = [
 	{ position = [0, 0, -3] }
 ]

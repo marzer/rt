@@ -1,5 +1,5 @@
 #include "window.hpp"
-#include "image_view.hpp"
+#include "image.hpp"
 MUU_DISABLE_WARNINGS;
 #include <stdexcept>
 #include <chrono>
@@ -66,29 +66,26 @@ window::window(std::string_view title, vec2u size) //
 	if (!handles_[1])
 		throw std::runtime_error{ SDL_GetError() };
 
-	handles_[2] = SDL_CreateTexture(static_cast<SDL_Renderer*>(handles_[1]),
-									SDL_PIXELFORMAT_RGBA8888,
-									SDL_TEXTUREACCESS_STREAMING,
-									static_cast<int>(size.x),
-									static_cast<int>(size.y));
+	back_buffer_ = back_buffer{ size, handles_[1] };
 }
 
 window::window(window&& other) noexcept //
 	: size_{ std::exchange(other.size_, {}) },
-	  handles_{ std::exchange(other.handles_, {}) }
+	  handles_{ std::exchange(other.handles_, {}) },
+	  back_buffer_{ std::move(other.back_buffer_) }
 {}
 
 window& window::operator=(window&& rhs) noexcept
 {
-	size_	 = std::exchange(rhs.size_, {});
-	handles_ = std::exchange(rhs.handles_, {});
+	size_		 = std::exchange(rhs.size_, {});
+	handles_	 = std::exchange(rhs.handles_, {});
+	back_buffer_ = std::move(rhs.back_buffer_);
 	return *this;
 }
 
 window::~window() noexcept
 {
-	if (handles_[2])
-		SDL_DestroyTexture(static_cast<SDL_Texture*>(handles_[2]));
+	back_buffer_ = {};
 
 	if (handles_[1])
 		SDL_DestroyRenderer(static_cast<SDL_Renderer*>(handles_[1]));
@@ -97,56 +94,61 @@ window::~window() noexcept
 		SDL_DestroyWindow(static_cast<SDL_Window*>(handles_[0]));
 }
 
-MUU_PURE_INLINE_GETTER
-window::operator bool() const noexcept
-{
-	for (auto handle : handles_)
-		if (!handle)
-			return false;
-	return true;
-}
-
-void window::loop(const events& ev)
+void window::loop(const window_events& ev)
 {
 	using clock	   = std::chrono::steady_clock;
 	auto prev_time = clock::now();
 
-	while (ev.should_quit ? !ev.should_quit() : true)
+	while (true)
 	{
-		if (SDL_Event e; SDL_PollEvent(&e))
+		SDL_Event e;
+		while (SDL_PollEvent(&e))
 		{
-			if (e.type == SDL_APP_TERMINATING || e.type == SDL_QUIT)
-				break;
+			switch (e.type)
+			{
+				case SDL_APP_TERMINATING: [[fallthrough]];
+				case SDL_QUIT: return;
+
+				case SDL_KEYDOWN:
+					if (ev.key_down)
+						ev.key_down(e.key.keysym.sym);
+					break;
+
+				case SDL_KEYUP:
+					if (ev.key_up)
+						ev.key_up(e.key.keysym.sym);
+					break;
+			}
 		}
 
 		auto time	  = clock::now();
 		const auto dt = time - prev_time;
 		prev_time	  = time;
 
+		bool backbuffer_dirty = true;
 		if (ev.update)
-			ev.update(std::min(std::chrono::duration<float>{ dt }.count(), 0.1f));
-
-		if (ev.render)
 		{
-			void* pixels{};
-			int pitch{};
-			if (SDL_LockTexture(static_cast<SDL_Texture*>(handles_[2]), nullptr, &pixels, &pitch) < 0)
-				throw std::runtime_error{ SDL_GetError() };
-			const auto unlock =
-				muu::scope_guard{ [&]() noexcept { SDL_UnlockTexture(static_cast<SDL_Texture*>(handles_[2])); } };
-
-			assert(static_cast<size_t>(pitch) == sizeof(uint32_t) * size_.x);
-			ev.render({ static_cast<uint32_t*>(pixels), size_ });
+			if (!ev.update(std::min(std::chrono::duration<float>{ dt }.count(), 0.1f), backbuffer_dirty))
+				return;
 		}
 
-		SDL_RenderClear(static_cast<SDL_Renderer*>(handles_[1]));
+		if (ev.render && back_buffer_ && backbuffer_dirty)
+		{
+			ev.render(back_buffer_.image());
+			back_buffer_.flush();
+		}
 
-		SDL_RenderCopy(static_cast<SDL_Renderer*>(handles_[1]),
-					   static_cast<SDL_Texture*>(handles_[2]),
-					   nullptr,
-					   nullptr);
+		if (back_buffer_)
+		{
+			SDL_RenderClear(static_cast<SDL_Renderer*>(handles_[1]));
 
-		SDL_RenderPresent(static_cast<SDL_Renderer*>(handles_[1]));
+			SDL_RenderCopy(static_cast<SDL_Renderer*>(handles_[1]),
+						   static_cast<SDL_Texture*>(back_buffer_.handle()),
+						   nullptr,
+						   nullptr);
+
+			SDL_RenderPresent(static_cast<SDL_Renderer*>(handles_[1]));
+		}
 	}
 }
 

@@ -223,6 +223,8 @@ scene scene::load(std::string_view path)
 
 	auto config = path == "-"sv ? toml::parse(std::cin, "stdin"sv) : toml::parse_file(path);
 
+	s.samples_per_pixel = muu::clamp(deserialize(config, "samples_per_pixel", 10u), 1u, 1000u);
+
 	if (auto camera = get_table(config, "camera"))
 	{
 		s.camera.pose(deserialize(*camera, "position", vec3{ 0, 1, 0 }),
@@ -236,7 +238,7 @@ scene scene::load(std::string_view path)
 			const auto plane = rt::plane{ deserialize(vals, "position", vec3{ 0, 0, 0 }),
 										  vec3::normalize(deserialize(vals, "normal", vec3{ 0, 1, 0 })) };
 
-			s.planes.push_back(plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
+			s.planes.push_back(plane, plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
 		}
 	}
 
@@ -244,10 +246,10 @@ scene scene::load(std::string_view path)
 	{
 		for (auto& vals : *spheres)
 		{
-			const auto pos = deserialize(vals, "position", vec3{ 0, 1, -3 });
-			const auto rad = deserialize(vals, "radius", 0.5f);
+			const auto sphere = rt::sphere{ deserialize(vals, "position", vec3{ 0, 1, -3 }), //
+											deserialize(vals, "radius", 0.5f) };
 
-			s.spheres.push_back(pos.x, pos.y, pos.z, rad);
+			s.spheres.push_back(sphere, sphere.center.x, sphere.center.y, sphere.center.z, sphere.radius);
 		}
 	}
 

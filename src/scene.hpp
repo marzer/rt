@@ -7,6 +7,7 @@ namespace rt
 {
 	struct scene
 	{
+		unsigned samples_per_pixel;
 		rt::camera camera;
 		rt::planes planes;
 		rt::spheres spheres;

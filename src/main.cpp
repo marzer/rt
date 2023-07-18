@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "window.hpp"
-#include "image_view.hpp"
+#include "image.hpp"
 #include "scene.hpp"
 #include "scalar_ray_tracer.hpp"
 #include "simd_ray_tracer.hpp"
@@ -19,44 +19,36 @@ using namespace rt;
 namespace
 {
 	static std::atomic_bool should_quit = false;
-}
 
-void run([[maybe_unused]] std::span<const char*> args)
-{
-	const auto scene = scene::load(args.empty() ? "" : args[0]);
+	static void run(std::span<const char*> args)
+	{
+		const auto scene = scene::load(args.empty() ? "" : args[0]);
 
-	muu::thread_pool threads;
+		muu::thread_pool threads;
 
-	std::unique_ptr<ray_tracer_interface> ray_tracer{ new scalar_ray_tracer };
+		std::unique_ptr<ray_tracer_interface> ray_tracer{ new scalar_ray_tracer };
 
-	auto win = window{ "rt", { 800, 600 } };
-	win.loop({ .should_quit = []() noexcept { return should_quit.load(); },
-
-			   .render =
-				   [&](image_view pixels) noexcept
-			   {
-#ifndef NDEBUG
-				   for (unsigned y = 0; y < pixels.size().y; y++)
+		bool dirty = true;
+		auto win   = window{ "rt", { 800, 600 } };
+		win.loop({ .key_down =
+					   [&](int key) noexcept
 				   {
-					   for (unsigned x = 0; x < pixels.size().x; x++)
-					   {
-						   vec2 red_green{ vec2u{ x, y } };
-						   if (red_green.length() <= 20.0)
-						   {
-							   pixels(x, y) = 0x00FFFFFFu;
-							   continue;
-						   }
+					   if (key == 0x20)
+						   dirty = true;
+				   },
 
-						   red_green /= vec2{ pixels.size() };
-						   red_green *= 255.9999f;
-						   pixels(x, y) = 0x000000FFu | (static_cast<unsigned>(red_green[0]) << 24)
-										| (static_cast<unsigned>(red_green[1]) << 16);
-					   }
-				   }
-#endif
+				   .update = [&](float /* delta_time */, bool& backbuffer_dirty) noexcept -> bool //
+				   {																			  //
+					   backbuffer_dirty = dirty;
+					   dirty			= false;
+					   return !should_quit;
+				   },
 
-				   ray_tracer->render(scene, pixels, threads);
-			   } });
+				   .render = [&](image_view pixels) noexcept //
+				   {										 //
+					   ray_tracer->render(scene, pixels, threads);
+				   } });
+	}
 }
 
 int main(int argc, char** argv)
