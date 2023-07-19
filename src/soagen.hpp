@@ -991,9 +991,6 @@ SOAGEN_DISABLE_WARNINGS;
 #include <utility>
 #include <memory>
 #include <optional>
-#if SOAGEN_CPP >= 20 && defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806
-	#include <bit>
-#endif
 SOAGEN_ENABLE_WARNINGS;
 
 SOAGEN_PUSH_WARNINGS;
@@ -1098,6 +1095,25 @@ SOAGEN_POP_WARNINGS;
 
 //********  meta.hpp  **************************************************************************************************
 
+SOAGEN_DISABLE_WARNINGS;
+#ifndef SOAGEN_COLUMN_SPAN_TYPE
+	#if SOAGEN_CPP >= 20
+		#include <span>
+		#define SOAGEN_COLUMN_SPAN_TYPE std::span
+	#elif SOAGEN_HAS_INCLUDE(<muu/span.h>)
+		#include <muu/span.h>
+		#define SOAGEN_COLUMN_SPAN_TYPE muu::span
+	#elif SOAGEN_HAS_INCLUDE(<tcb/span.hpp>)
+		#include <tcb/span.hpp>
+		#define SOAGEN_COLUMN_SPAN_TYPE TCB_SPAN_NAMESPACE_NAME::span
+	#endif
+#endif
+#ifndef SOAGEN_OPTIONAL_TYPE
+	#include <optional>
+	#define SOAGEN_OPTIONAL_TYPE std::optional
+#endif
+SOAGEN_ENABLE_WARNINGS;
+
 SOAGEN_PUSH_WARNINGS;
 SOAGEN_DISABLE_SPAM_WARNINGS;
 
@@ -1153,6 +1169,18 @@ namespace soagen
 
 	template <auto Value>
 	using index_tag = std::integral_constant<size_t, static_cast<size_t>(Value)>;
+
+#ifdef SOAGEN_COLUMN_SPAN_TYPE
+
+	template <typename T, size_t N = static_cast<size_t>(-1)>
+	using column_span = SOAGEN_COLUMN_SPAN_TYPE<T, N>;
+
+	template <typename T, size_t N = static_cast<size_t>(-1)>
+	using const_column_span = column_span<std::add_const_t<T>, N>;
+
+#endif
+
+	using SOAGEN_OPTIONAL_TYPE;
 
 	namespace detail
 	{
@@ -1292,31 +1320,31 @@ namespace soagen
 	template <typename ValueType>
 	using param_type = typename detail::param_type_<ValueType>::type;
 
+	// utility class for passing multiple variadic packs through to emplace
 	template <typename... Args>
-	struct forwarder
+	struct emplacer
 	{
 		static_assert(sizeof...(Args));
 		static_assert((std::is_reference_v<Args> && ...));
 
-		template <size_t Index>
-		using type = type_at_index<Index, Args...>;
-
 		void* ptrs[sizeof...(Args)];
 
-		SOAGEN_DEFAULT_RULE_OF_FIVE(forwarder);
+		SOAGEN_DEFAULT_RULE_OF_FIVE(emplacer);
 
 		SOAGEN_NODISCARD_CTOR
-		constexpr forwarder(Args&&... args) noexcept //
+		constexpr emplacer(Args&&... args) noexcept //
 			: ptrs{ const_cast<void*>(static_cast<const volatile void*>(&args))... }
 		{}
 	};
+	template <>
+	struct emplacer<>
+	{};
 	template <typename... Args>
-	forwarder(Args&&...) -> forwarder<Args&&...>;
-
+	emplacer(Args&&...) -> emplacer<Args&&...>;
 	template <typename T>
-	inline constexpr bool is_forwarder = false;
+	inline constexpr bool is_emplacer = false;
 	template <typename... T>
-	inline constexpr bool is_forwarder<forwarder<T...>> = true;
+	inline constexpr bool is_emplacer<emplacer<T...>> = true;
 }
 
 #if SOAGEN_ALWAYS_OPTIMIZE
@@ -1626,6 +1654,10 @@ namespace std
 SOAGEN_POP_WARNINGS;
 
 //********  functions.hpp  *********************************************************************************************
+
+#if SOAGEN_CPP >= 20 && defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806
+	#include <bit>
+#endif
 
 SOAGEN_PUSH_WARNINGS;
 SOAGEN_DISABLE_SPAM_WARNINGS;
@@ -2287,7 +2319,7 @@ namespace soagen::detail
 		template <typename T>
 		static constexpr bool is_constructible<T*&&> = std::is_same_v<storage_type, void*>;
 		template <typename... Args>
-		static constexpr bool is_constructible<forwarder<Args...>&&> = is_constructible<Args...>;
+		static constexpr bool is_constructible<emplacer<Args...>&&> = is_constructible<Args...>;
 
 		template <typename... Args>
 		static constexpr bool is_nothrow_constructible = std::is_nothrow_constructible_v<storage_type, Args&&...>;
@@ -2296,14 +2328,14 @@ namespace soagen::detail
 		template <typename T>
 		static constexpr bool is_nothrow_constructible<T*&&> = std::is_same_v<storage_type, void*>;
 		template <typename... Args>
-		static constexpr bool is_nothrow_constructible<forwarder<Args...>&&> = is_constructible<Args...>;
+		static constexpr bool is_nothrow_constructible<emplacer<Args...>&&> = is_constructible<Args...>;
 
 	  private:
 		template <typename... Args, size_t... Indices>
 		SOAGEN_ATTR(nonnull)
-		static constexpr storage_type& construct_from_forwarder(std::byte* destination,
-																forwarder<Args...>&& args,
-																std::index_sequence<Indices...>) //
+		static constexpr storage_type& construct_from_emplacer(std::byte* destination,
+															   emplacer<Args...>&& args,
+															   std::index_sequence<Indices...>) //
 			noexcept(is_nothrow_constructible<Args...>)
 		{
 			static_assert(sizeof...(Args) == sizeof...(Indices));
@@ -2328,15 +2360,15 @@ namespace soagen::detail
 	  public:
 		template <typename... Args>
 		SOAGEN_ATTR(nonnull)
-		static constexpr storage_type& construct_from_forwarder(std::byte* destination,
-																forwarder<Args...>&& args) //
+		static constexpr storage_type& construct_from_emplacer(std::byte* destination,
+															   emplacer<Args...>&& args) //
 			noexcept(is_nothrow_constructible<Args...>)
 		{
 			static_assert((std::is_reference_v<Args> && ...));
 
-			return construct_from_forwarder(destination,
-											static_cast<forwarder<Args...>&&>(args),
-											std::make_index_sequence<sizeof...(Args)>{});
+			return construct_from_emplacer(destination,
+										   static_cast<emplacer<Args...>&&>(args),
+										   std::make_index_sequence<sizeof...(Args)>{});
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE(is_constructible<Args&&...>, typename... Args)
@@ -2360,9 +2392,9 @@ namespace soagen::detail
 						::new (static_cast<void*>(soagen::assume_aligned<alignof(storage_type)>(destination)))
 							storage_type{ const_cast<storage_type>(reinterpret_cast<const volatile void*>(args))... });
 				}
-				else if constexpr (sizeof...(Args) == 1 && (is_forwarder<std::remove_reference_t<Args>> && ...))
+				else if constexpr (sizeof...(Args) == 1 && (is_emplacer<std::remove_reference_t<Args>> && ...))
 				{
-					return construct_from_forwarder(destination, static_cast<Args&&>(args)...);
+					return construct_from_emplacer(destination, static_cast<Args&&>(args)...);
 				}
 				else if constexpr (std::is_aggregate_v<storage_type>)
 				{
@@ -4761,8 +4793,8 @@ namespace soagen::detail
 
 		SOAGEN_DEFAULT_RULE_OF_FIVE(table_row_erasure_unordered);
 
-		std::optional<size_t> unordered_erase(size_t pos) //
-			noexcept(TableTraits::all_nothrow_swappable	  //
+		soagen::optional<size_t> unordered_erase(size_t pos) //
+			noexcept(TableTraits::all_nothrow_swappable		 //
 						 && noexcept(Base::pop_back()))
 		{
 			SOAGEN_ASSUME(pos < Base::count_);
@@ -4775,7 +4807,7 @@ namespace soagen::detail
 
 			TableTraits::swap_rows(Base::alloc_.columns, pos, Base::alloc_.columns, Base::count_ - 1u);
 			Base::pop_back();
-			return std::optional<size_t>{ Base::count_ };
+			return soagen::optional<size_t>{ Base::count_ };
 		}
 	};
 

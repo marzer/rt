@@ -15,12 +15,13 @@ file_names = [
 	'scene',
 	'scalar_ray_tracer',
 	'simd_ray_tracer',
+	'colour',
 ]
 cpp_files = []
 extra_files = []
 extra_files += scene_files
 foreach name : file_names
-	foreach suffix : ['.hpp','.cpp','.toml']
+	foreach suffix : ['.hpp','.cpp','.toml','.natvis']
 		if fs.is_file(name + suffix)
 			if suffix == '.cpp'
 				cpp_files += files(name + suffix)

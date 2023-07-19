@@ -1,11 +1,17 @@
 namespace = 'rt'
 
 [hpp]
-internal_includes = 'common.hpp'
+internal_includes = [ 'common.hpp', 'colour.hpp' ]
+
+[structs.materials]
+variables = [
+	{ name = 'colour',   type = 'rt::colour' },
+]
 
 [structs.planes]
 variables = [
-	{ name = 'value',    type = 'rt::plane', alignment = 32 },
+	{ name = 'value',    type = 'rt::plane' },
+	{ name = 'material', type = 'size_t'    },
 	{ name = 'normal_x', type = 'float',     alignment = 32 },
 	{ name = 'normal_y', type = 'float',     alignment = 32 },
 	{ name = 'normal_z', type = 'float',     alignment = 32 },
@@ -14,7 +20,8 @@ variables = [
 
 [structs.spheres]
 variables = [
-	{ name = 'value',    type = 'rt::sphere', alignment = 32 },
+	{ name = 'value',    type = 'rt::sphere' },
+	{ name = 'material', type = 'size_t'    },
 	{ name = 'center_x', type = 'float',      alignment = 32 },
 	{ name = 'center_y', type = 'float',      alignment = 32 },
 	{ name = 'center_z', type = 'float',      alignment = 32 },
@@ -23,6 +30,7 @@ variables = [
 
 [structs.boxes]
 variables = [
+	{ name = 'material', type = 'size_t'    },
 	{ name = 'center_x', type = 'float',  alignment = 32 },
 	{ name = 'center_y', type = 'float',  alignment = 32 },
 	{ name = 'center_z', type = 'float',  alignment = 32 },

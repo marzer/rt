@@ -9,6 +9,7 @@ namespace rt
 	{
 		unsigned samples_per_pixel;
 		rt::camera camera;
+		rt::materials materials;
 		rt::planes planes;
 		rt::spheres spheres;
 		rt::boxes boxes;

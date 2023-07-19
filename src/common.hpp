@@ -16,7 +16,6 @@ MUU_DISABLE_WARNINGS;
 #include <muu/ray.h>
 #include <muu/scope_guard.h>
 #include <muu/assume_aligned.h>
-#include <muu/bit.h>
 MUU_ENABLE_WARNINGS;
 
 namespace rt
@@ -38,8 +37,9 @@ namespace rt
 	using floats = muu::constants<float>;
 
 	using vec2u	 = muu::vector<unsigned, 2>;
-	using vec2	 = muu::vector<float, 2>;
 	using vec3u	 = muu::vector<unsigned, 3>;
+	using vec4u	 = muu::vector<unsigned, 4>;
+	using vec2	 = muu::vector<float, 2>;
 	using vec3	 = muu::vector<float, 3>;
 	using vec4	 = muu::vector<float, 4>;
 	using quat	 = muu::quaternion<float>;
@@ -49,6 +49,7 @@ namespace rt
 	using sphere = muu::bounding_sphere<float>;
 	using ray	 = muu::ray<float>;
 
+	struct colour;
 	struct scene;
 	struct viewport;
 	struct window_events;
@@ -60,6 +61,7 @@ namespace rt
 	class back_buffer;
 
 	// soa:
+	class materials;
 	class planes;
 	class spheres;
 	class boxes;
@@ -81,21 +83,6 @@ namespace rt
 		using namespace muu::literals;
 		using namespace std::string_view_literals;
 		MUU_ENABLE_WARNINGS;
-
-		MUU_CONSTEVAL uint32_t operator"" _rgba(unsigned long long rgba) noexcept
-		{
-			return static_cast<uint32_t>(rgba);
-		}
-
-		MUU_CONSTEVAL uint32_t operator"" _rgb(unsigned long long rgba) noexcept
-		{
-			return static_cast<uint32_t>((rgba << 8u) | 0x000000FFu);
-		}
-
-		MUU_CONSTEVAL uint32_t operator"" _argb(unsigned long long argb) noexcept
-		{
-			return muu::swizzle<2, 1, 0, 3>(static_cast<uint32_t>(argb));
-		}
 	}
 
 	[[nodiscard]]

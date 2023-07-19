@@ -6,6 +6,7 @@ MUU_DISABLE_WARNINGS;
 #include <stdexcept>
 #include <concepts>
 #include <muu/type_name.h>
+#include <muu/hashing.h>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -37,12 +38,23 @@ namespace
 	}
 
 	template <typename... T>
+	MUU_PURE_GETTER
+	static constexpr uint64_t fnv1a_hash(std::string_view str, const T&... strs) noexcept
+	{
+		muu::fnv1a<64> hasher;
+		hasher(str);
+		(hasher(strs), ...);
+		return hasher.value();
+	}
+
+	template <typename... T>
 	[[noreturn]]
 	static void error(const toml::node& node, T&&... args)
 	{
 		std::ostringstream msg;
 		((msg << static_cast<T&&>(args)), ...);
-		throw toml::parse_error{ std::move(msg).str().c_str(), node.source() };
+		msg << "\n\n" << node.source();
+		throw std::runtime_error{ std::move(msg).str().c_str() };
 	}
 
 	template <typename T>
@@ -62,7 +74,8 @@ namespace
 			msg << node.type();
 		msg << " to " << muu::type_name<std::remove_cvref_t<T>>;
 
-		throw toml::parse_error{ std::move(msg).str().c_str(), node.source() };
+		msg << "\n\n" << node.source();
+		throw std::runtime_error{ std::move(msg).str().c_str() };
 	}
 
 	template <concepts::arithmetic_or_bool T>
@@ -80,9 +93,39 @@ namespace
 		return val;
 	}
 
+#define string_vector_case_fallthrough(name)                                                                           \
+	case fnv1a_hash(#name): [[fallthrough]]
+#define string_vector_case(name)                                                                                       \
+	case fnv1a_hash(#name): return val = muu::vector<T, N>::constants::name
+
 	template <typename T, size_t N>
 	static auto& deserialize(const toml::node& node, muu::vector<T, N>& val)
 	{
+		if (const auto str = node.as_string())
+		{
+			switch (fnv1a_hash(**str))
+			{
+				string_vector_case_fallthrough(origin);
+				string_vector_case(zero);
+				string_vector_case(one);
+				string_vector_case(forward);
+				string_vector_case_fallthrough(back);
+				string_vector_case(backward);
+				string_vector_case(up);
+				string_vector_case(down);
+				string_vector_case(left);
+				string_vector_case(right);
+				string_vector_case_fallthrough(x);
+				string_vector_case(x_axis);
+				string_vector_case_fallthrough(y);
+				string_vector_case(y_axis);
+				string_vector_case_fallthrough(z);
+				string_vector_case(z_axis);
+			}
+
+			error(node, "unknown vector alias '"sv, **str, "'"sv);
+		}
+
 		bool broadcasted = false;
 		node.visit(
 			[&](auto& n) noexcept
@@ -101,7 +144,7 @@ namespace
 			mismatch_error(node, val);
 
 		for (size_t i = 0; i < arr->size(); i++)
-			deserialize<T>((*arr)[i], val[i]);
+			deserialize((*arr)[i], val[i]);
 
 		return val;
 	}
@@ -117,6 +160,181 @@ namespace
 			for (size_t c = 0; c < C && i < arr->size(); c++, i++)
 				deserialize((*arr)[i], val(r, c));
 
+		return val;
+	}
+
+#define string_colour_case(name)                                                                                       \
+	case fnv1a_hash(#name): return val = colours::name
+
+	static auto& deserialize(const toml::node& node, colour& val)
+	{
+		if (const auto str = node.as_string())
+		{
+			switch (fnv1a_hash(**str))
+			{
+				string_colour_case(alice_blue);
+				string_colour_case(antique_white);
+				string_colour_case(aqua);
+				string_colour_case(aquamarine);
+				string_colour_case(azure);
+				string_colour_case(beige);
+				string_colour_case(bisque);
+				string_colour_case(black);
+				string_colour_case(blanched_almond);
+				string_colour_case(blue);
+				string_colour_case(blue_violet);
+				string_colour_case(brown);
+				string_colour_case(burly_wood);
+				string_colour_case(cadet_blue);
+				string_colour_case(chartreuse);
+				string_colour_case(chocolate);
+				string_colour_case(coral);
+				string_colour_case(cornflower_blue);
+				string_colour_case(cornsilk);
+				string_colour_case(crimson);
+				string_colour_case(cyan);
+				string_colour_case(dark_blue);
+				string_colour_case(dark_cyan);
+				string_colour_case(dark_goldenrod);
+				string_colour_case(dark_gray);
+				string_colour_case(dark_green);
+				string_colour_case(dark_khaki);
+				string_colour_case(dark_magenta);
+				string_colour_case(dark_olive_green);
+				string_colour_case(dark_orange);
+				string_colour_case(dark_orchid);
+				string_colour_case(dark_red);
+				string_colour_case(dark_salmon);
+				string_colour_case(dark_sea_green);
+				string_colour_case(dark_slate_blue);
+				string_colour_case(dark_slate_gray);
+				string_colour_case(dark_turquoise);
+				string_colour_case(dark_violet);
+				string_colour_case(deep_pink);
+				string_colour_case(deep_sky_blue);
+				string_colour_case(dim_gray);
+				string_colour_case(dodger_blue);
+				string_colour_case(fire_brick);
+				string_colour_case(floral_white);
+				string_colour_case(forest_green);
+				string_colour_case(fuchsia);
+				string_colour_case(gainsboro);
+				string_colour_case(ghost_white);
+				string_colour_case(gold);
+				string_colour_case(goldenrod);
+				string_colour_case(gray);
+				string_colour_case(green);
+				string_colour_case(green_yellow);
+				string_colour_case(honey_dew);
+				string_colour_case(hot_pink);
+				string_colour_case(indian_red);
+				string_colour_case(indigo);
+				string_colour_case(ivory);
+				string_colour_case(khaki);
+				string_colour_case(lavender);
+				string_colour_case(lavender_blush);
+				string_colour_case(lawn_green);
+				string_colour_case(lemon_chiffon);
+				string_colour_case(light_blue);
+				string_colour_case(light_coral);
+				string_colour_case(light_cyan);
+				string_colour_case(light_goldenrod_yellow);
+				string_colour_case(light_gray);
+				string_colour_case(light_green);
+				string_colour_case(light_pink);
+				string_colour_case(light_salmon);
+				string_colour_case(light_sea_green);
+				string_colour_case(light_sky_blue);
+				string_colour_case(light_slate_gray);
+				string_colour_case(light_steel_blue);
+				string_colour_case(light_yellow);
+				string_colour_case(lime);
+				string_colour_case(lime_green);
+				string_colour_case(linen);
+				string_colour_case(magenta);
+				string_colour_case(maroon);
+				string_colour_case(medium_aquamarine);
+				string_colour_case(medium_blue);
+				string_colour_case(medium_orchid);
+				string_colour_case(medium_purple);
+				string_colour_case(medium_sea_green);
+				string_colour_case(medium_slate_blue);
+				string_colour_case(medium_spring_green);
+				string_colour_case(medium_turquoise);
+				string_colour_case(medium_violet_red);
+				string_colour_case(midnight_blue);
+				string_colour_case(mint_cream);
+				string_colour_case(misty_rose);
+				string_colour_case(moccasin);
+				string_colour_case(navajo_white);
+				string_colour_case(navy);
+				string_colour_case(old_lace);
+				string_colour_case(olive);
+				string_colour_case(olive_drab);
+				string_colour_case(orange);
+				string_colour_case(orange_red);
+				string_colour_case(orchid);
+				string_colour_case(pale_goldenrod);
+				string_colour_case(pale_green);
+				string_colour_case(pale_turquoise);
+				string_colour_case(pale_violet_red);
+				string_colour_case(papaya_whip);
+				string_colour_case(peach_puff);
+				string_colour_case(peru);
+				string_colour_case(pink);
+				string_colour_case(plum);
+				string_colour_case(powder_blue);
+				string_colour_case(purple);
+				string_colour_case(rebecca_purple);
+				string_colour_case(red);
+				string_colour_case(rosy_brown);
+				string_colour_case(royal_blue);
+				string_colour_case(saddle_brown);
+				string_colour_case(salmon);
+				string_colour_case(sandy_brown);
+				string_colour_case(sea_green);
+				string_colour_case(sea_shell);
+				string_colour_case(sienna);
+				string_colour_case(silver);
+				string_colour_case(sky_blue);
+				string_colour_case(slate_blue);
+				string_colour_case(slate_gray);
+				string_colour_case(snow);
+				string_colour_case(spring_green);
+				string_colour_case(steel_blue);
+				string_colour_case(tan);
+				string_colour_case(teal);
+				string_colour_case(thistle);
+				string_colour_case(tomato);
+				string_colour_case(turquoise);
+				string_colour_case(violet);
+				string_colour_case(wheat);
+				string_colour_case(white);
+				string_colour_case(white_smoke);
+				string_colour_case(yellow);
+				string_colour_case(yellow_green);
+				string_colour_case(gray_87);
+				string_colour_case(gray_75);
+				string_colour_case(gray_67);
+				string_colour_case(gray_50);
+				string_colour_case(gray_33);
+				string_colour_case(gray_25);
+				string_colour_case(portal_blue);
+				string_colour_case(portal_orange);
+			}
+
+			error(node, "unknown colour alias '"sv, **str, "'"sv);
+		}
+
+		auto arr = node.as_array();
+		if (!arr || arr->size() > 4)
+			mismatch_error(node, val);
+
+		val.xyzw = {};
+		for (size_t i = 0; i < arr->size(); i++)
+			deserialize((*arr)[i], val.values[i]);
+		if (arr->size() < 4)
+			val.a = 1.0f;
 		return val;
 	}
 
@@ -231,36 +449,55 @@ scene scene::load(std::string_view path)
 					  deserialize(*camera, "direction", vec3::constants::forward));
 	}
 
+	if (auto materials = get_array(config, "materials"))
+	{
+		for (auto& tbl : *materials)
+		{
+			s.materials.push_back(deserialize(tbl, "colour", colour{}));
+		}
+	}
+	if (s.materials.empty())
+		s.materials.push_back(0xFF0080_rgb);
+
+	const auto get_material = [&](const toml::node& parent) -> size_t
+	{
+		const auto material = deserialize(parent, "material", size_t{});
+		if (material >= s.materials.size())
+			error(parent, "material index "sv, material, " out-of-range");
+		return material;
+	};
+
 	if (auto planes = get_array(config, "planes"))
 	{
-		for (auto& vals : *planes)
+		for (auto& tbl : *planes)
 		{
-			const auto plane = rt::plane{ deserialize(vals, "position", vec3{ 0, 0, 0 }),
-										  vec3::normalize(deserialize(vals, "normal", vec3{ 0, 1, 0 })) };
+			const auto plane = rt::plane{ deserialize(tbl, "position", vec3{ 0, 0, 0 }),
+										  vec3::normalize(deserialize(tbl, "normal", vec3{ 0, 1, 0 })) };
 
-			s.planes.push_back(plane, plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
+			s.planes.push_back(plane, get_material(tbl), plane.normal.x, plane.normal.y, plane.normal.z, plane.d);
 		}
 	}
 
 	if (auto spheres = get_array(config, "spheres"))
 	{
-		for (auto& vals : *spheres)
+		for (auto& tbl : *spheres)
 		{
-			const auto sphere = rt::sphere{ deserialize(vals, "position", vec3{ 0, 1, -3 }), //
-											deserialize(vals, "radius", 0.5f) };
+			const auto sphere = rt::sphere{ deserialize(tbl, "position", vec3{ 0, 1, -3 }), //
+											deserialize(tbl, "radius", 0.5f) };
 
-			s.spheres.push_back(sphere, sphere.center.x, sphere.center.y, sphere.center.z, sphere.radius);
+			s.spheres
+				.push_back(sphere, get_material(tbl), sphere.center.x, sphere.center.y, sphere.center.z, sphere.radius);
 		}
 	}
 
 	if (auto boxes = get_array(config, "boxes"))
 	{
-		for (auto& vals : *boxes)
+		for (auto& tbl : *boxes)
 		{
-			const auto pos	   = deserialize(vals, "position", vec3{ 0, 1, -3 });
-			const auto extents = deserialize(vals, "extents", vec3{ 0.5f });
+			const auto pos	   = deserialize(tbl, "position", vec3{ 0, 1, -3 });
+			const auto extents = deserialize(tbl, "extents", vec3{ 0.5f });
 
-			s.boxes.push_back(pos.x, pos.y, pos.z, extents.x, extents.y, extents.z);
+			s.boxes.push_back(get_material(tbl), pos.x, pos.y, pos.z, extents.x, extents.y, extents.z);
 		}
 	}
 
