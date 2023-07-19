@@ -2,7 +2,6 @@
 #include "image.hpp"
 MUU_DISABLE_WARNINGS;
 #include <stdexcept>
-#include <chrono>
 #include <SDL.h>
 #include <string>
 #include <atomic>
@@ -66,26 +65,29 @@ window::window(std::string_view title, vec2u size) //
 	if (!handles_[1])
 		throw std::runtime_error{ SDL_GetError() };
 
-	back_buffer_ = back_buffer{ size, handles_[1] };
+	back_buffers_[0] = back_buffer{ size, handles_[1] };
+	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * 0.1f }, handles_[1] };
 }
 
 window::window(window&& other) noexcept //
 	: size_{ std::exchange(other.size_, {}) },
 	  handles_{ std::exchange(other.handles_, {}) },
-	  back_buffer_{ std::move(other.back_buffer_) }
+	  back_buffers_{ std::move(other.back_buffers_) },
+	  low_res_mode{ std::exchange(low_res_mode, {}) }
 {}
 
 window& window::operator=(window&& rhs) noexcept
 {
-	size_		 = std::exchange(rhs.size_, {});
-	handles_	 = std::exchange(rhs.handles_, {});
-	back_buffer_ = std::move(rhs.back_buffer_);
+	size_		  = std::exchange(rhs.size_, {});
+	handles_	  = std::exchange(rhs.handles_, {});
+	back_buffers_ = std::move(rhs.back_buffers_);
+	low_res_mode  = std::exchange(rhs.low_res_mode, {});
 	return *this;
 }
 
 window::~window() noexcept
 {
-	back_buffer_ = {};
+	back_buffers_ = {};
 
 	if (handles_[1])
 		SDL_DestroyRenderer(static_cast<SDL_Renderer*>(handles_[1]));
@@ -96,7 +98,6 @@ window::~window() noexcept
 
 void window::loop(const window_events& ev)
 {
-	using clock	   = std::chrono::steady_clock;
 	auto prev_time = clock::now();
 
 	while (true)
@@ -128,22 +129,24 @@ void window::loop(const window_events& ev)
 		bool backbuffer_dirty = true;
 		if (ev.update)
 		{
-			if (!ev.update(std::min(std::chrono::duration<float>{ dt }.count(), 0.1f), backbuffer_dirty))
+			if (!ev.update(std::min(to_seconds(dt), 0.25f), backbuffer_dirty))
 				return;
 		}
 
-		if (ev.render && back_buffer_ && backbuffer_dirty)
+		auto& current_back_buffer = back_buffers_[static_cast<unsigned>(low_res_mode)];
+
+		if (ev.render && current_back_buffer && backbuffer_dirty)
 		{
-			ev.render(back_buffer_.image());
-			back_buffer_.flush();
+			ev.render(current_back_buffer.image());
+			current_back_buffer.flush();
 		}
 
-		if (back_buffer_)
+		if (current_back_buffer)
 		{
 			SDL_RenderClear(static_cast<SDL_Renderer*>(handles_[1]));
 
 			SDL_RenderCopy(static_cast<SDL_Renderer*>(handles_[1]),
-						   static_cast<SDL_Texture*>(back_buffer_.handle()),
+						   static_cast<SDL_Texture*>(current_back_buffer.handle()),
 						   nullptr,
 						   nullptr);
 

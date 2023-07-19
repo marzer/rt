@@ -7,7 +7,10 @@ namespace rt
 {
 	struct scene
 	{
-		unsigned samples_per_pixel;
+		unsigned samples_per_pixel = 30;
+		unsigned max_bounces	   = 10;
+		bool low_res_mode		   = false;
+
 		rt::camera camera;
 		rt::materials materials;
 		rt::planes planes;

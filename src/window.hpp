@@ -18,11 +18,13 @@ namespace rt
 	class window
 	{
 	  private:
-		vec2u size_					  = {};
-		std::array<void*, 2> handles_ = {};
-		back_buffer back_buffer_;
+		vec2u size_								 = {};
+		std::array<void*, 2> handles_			 = {};
+		std::array<back_buffer, 2> back_buffers_ = {};
 
 	  public:
+		bool low_res_mode = false;
+
 		window() noexcept = default;
 
 		MUU_NODISCARD_CTOR
@@ -38,10 +40,10 @@ namespace rt
 		MUU_PURE_INLINE_GETTER
 		explicit operator bool() const noexcept
 		{
-			return handles_[0]	//
-				&& handles_[1]	//
-				&& back_buffer_ //
-				&& size_.x > 0	//
+			return handles_[0]										  //
+				&& handles_[1]										  //
+				&& back_buffers_[static_cast<unsigned>(low_res_mode)] //
+				&& size_.x > 0										  //
 				&& size_.y > 0;
 		}
 

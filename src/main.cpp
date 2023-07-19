@@ -22,23 +22,84 @@ namespace
 
 	static void run(std::span<const char*> args)
 	{
-		const auto scene = scene::load(args.empty() ? "" : args[0]);
+		rt::scene scene;
+		const auto reload = [&]()
+		{
+			try
+			{
+				scene = scene::load(args.empty() ? "" : args[0]);
+				return true;
+			}
+			catch (const std::exception& ex)
+			{
+				std::cerr << "FATAL ERROR: " << ex.what() << "\n";
+				window::error_message_box("FATAL ERROR", ex.what());
+				return false;
+			}
+		};
+		reload();
 
 		muu::thread_pool threads;
 
 		std::unique_ptr<ray_tracer_interface> ray_tracer{ new scalar_ray_tracer };
 
-		bool dirty = true;
-		auto win   = window{ "rt", { 800, 600 } };
+		bool dirty					 = true;
+		auto win					 = window{ "rt", { 800, 600 } };
+		vec3 move_dir				 = {};
+		time_point low_res_mode_time = clock::now();
 		win.loop({ .key_down =
 					   [&](int key) noexcept
 				   {
-					   if (key == 0x20)
-						   dirty = true;
+					   switch (key)
+					   {
+						   case ' ':
+							   if (reload())
+							   {
+								   scene.low_res_mode = win.low_res_mode;
+								   dirty			  = true;
+							   }
+							   break;
+
+						   case 97: move_dir.x += 1; break;
+						   case 100: move_dir.x += -1; break;
+						   case 119: move_dir.z += -1; break;
+						   case 115: move_dir.z += 1; break;
+					   }
 				   },
 
-				   .update = [&](float /* delta_time */, bool& backbuffer_dirty) noexcept -> bool //
-				   {																			  //
+				   .key_up =
+					   [&](int key) noexcept
+				   {
+					   switch (key)
+					   {
+						   case 97: move_dir.x -= 1; break;
+						   case 100: move_dir.x -= -1; break;
+						   case 119: move_dir.z -= -1; break;
+						   case 115: move_dir.z -= 1; break;
+					   }
+				   },
+
+				   .update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool //
+				   {																		//
+					   if (!muu::approx_zero(move_dir))
+					   {
+						   auto move = vec3::normalize(move_dir) * delta_time;
+						   if (!muu::approx_zero(move))
+						   {
+							   scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
+							   dirty			  = true;
+							   low_res_mode_time  = clock::now();
+							   win.low_res_mode	  = true;
+							   scene.low_res_mode = true;
+						   }
+					   }
+					   else if (to_seconds(clock::now() - low_res_mode_time) >= 1.0f && win.low_res_mode)
+					   {
+						   win.low_res_mode	  = false;
+						   scene.low_res_mode = false;
+						   dirty			  = true;
+					   }
+
 					   backbuffer_dirty = dirty;
 					   dirty			= false;
 					   return !should_quit;

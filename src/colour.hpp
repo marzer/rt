@@ -41,12 +41,12 @@ namespace rt
 		colour() noexcept = default;
 
 		MUU_NODISCARD_CTOR
-		explicit constexpr colour(const vec3 rgb, float a) noexcept //
+		explicit constexpr colour(const vec3 rgb, float a = 1.0f) noexcept //
 			: xyzw{ rgb, a }
 		{}
 
 		MUU_NODISCARD_CTOR
-		explicit constexpr colour(const vec3 rgba) noexcept //
+		explicit constexpr colour(const vec4 rgba) noexcept //
 			: xyzw{ rgba }
 		{}
 
@@ -69,6 +69,21 @@ namespace rt
 			const auto src =
 				vec4u{ vec4::clamp(xyzw, vec4::constants::zero, vec4::constants::one) * vec4{ 255.99999f } };
 			return (src.x << 24u) | (src.y << 16u) | (src.z << 8u) | src.w;
+		}
+
+	  private:
+		MUU_ALWAYS_INLINE
+		MUU_PURE
+		friend constexpr colour& MUU_VECTORCALL operator+=(colour& lhs, colour rhs) noexcept
+		{
+			lhs.xyzw += rhs.xyzw;
+			return lhs;
+		}
+
+		MUU_PURE_INLINE_GETTER
+		friend constexpr colour MUU_VECTORCALL operator+(colour lhs, colour rhs) noexcept
+		{
+			return lhs += rhs;
 		}
 	};
 	static_assert(std::is_trivially_copyable_v<colour>);

@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/marzer/muu.git
-revision = 8182794c3abf9e65ffbcb80a8d89419be1bfb12b
+revision = 19daed6dd81c66d43b455a506521bf4cd22bf8c8
 depth = 1
 clone-recursive = false
 

@@ -20,7 +20,7 @@ namespace
 	}
 }
 
-namespace rt
+namespace rt::detail
 {
 	float MUU_VECTORCALL random_float() noexcept
 	{

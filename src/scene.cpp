@@ -441,7 +441,9 @@ scene scene::load(std::string_view path)
 
 	auto config = path == "-"sv ? toml::parse(std::cin, "stdin"sv) : toml::parse_file(path);
 
-	s.samples_per_pixel = muu::clamp(deserialize(config, "samples_per_pixel", 10u), 1u, 1000u);
+	s.samples_per_pixel = muu::clamp(deserialize(config, "samples_per_pixel", 30u), 1u, 1000u);
+	s.max_bounces		= muu::clamp(deserialize(config, "max_bounces", 10u), 1u, 1000u);
+	s.low_res_mode		= false;
 
 	if (auto camera = get_table(config, "camera"))
 	{
@@ -494,10 +496,17 @@ scene scene::load(std::string_view path)
 	{
 		for (auto& tbl : *boxes)
 		{
-			const auto pos	   = deserialize(tbl, "position", vec3{ 0, 1, -3 });
-			const auto extents = deserialize(tbl, "extents", vec3{ 0.5f });
+			const auto box = rt::box{ deserialize(tbl, "position", vec3{ 0, 1, -3 }), //
+									  deserialize(tbl, "extents", vec3{ 0.5f }) };
 
-			s.boxes.push_back(get_material(tbl), pos.x, pos.y, pos.z, extents.x, extents.y, extents.z);
+			s.boxes.push_back(box,
+							  get_material(tbl),
+							  box.center.x,
+							  box.center.y,
+							  box.center.z,
+							  box.extents.x,
+							  box.extents.y,
+							  box.extents.z);
 		}
 	}
 

@@ -17,12 +17,12 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;size_t*&gt;(table_.alloc_.columns[0])"
+			Expression="reinterpret_cast&lt;rt::box*&gt;(table_.alloc_.columns[0])"
 		/>
 
 		<Intrinsic
 			Name="get_1"
-			Expression="reinterpret_cast&lt;float*&gt;(table_.alloc_.columns[1])"
+			Expression="reinterpret_cast&lt;size_t*&gt;(table_.alloc_.columns[1])"
 		/>
 
 		<Intrinsic
@@ -50,15 +50,19 @@
 			Expression="reinterpret_cast&lt;float*&gt;(table_.alloc_.columns[6])"
 		/>
 
-		<DisplayString>{{ size={size()} }}</DisplayString>
+		<Intrinsic
+			Name="get_7"
+			Expression="reinterpret_cast&lt;float*&gt;(table_.alloc_.columns[7])"
+		/>
 
+		<DisplayString>{{ size={size()} }}</DisplayString>
 		<Expand>
 
 			<Item Name="[size]">size()</Item>
 			<Item Name="[capacity]">capacity()</Item>
 			<Item Name="[allocation]">size_bytes()</Item>
 
-			<Synthetic Name="material">
+			<Synthetic Name="value">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_0())}, {*(get_0() + 1)} }}</DisplayString>
@@ -72,7 +76,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_x">
+			<Synthetic Name="material">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_1())}, {*(get_1() + 1)} }}</DisplayString>
@@ -86,7 +90,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_y">
+			<Synthetic Name="center_x">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_2())}, {*(get_2() + 1)} }}</DisplayString>
@@ -100,7 +104,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_z">
+			<Synthetic Name="center_y">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_3())}, {*(get_3() + 1)} }}</DisplayString>
@@ -114,7 +118,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_x">
+			<Synthetic Name="center_z">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_4())}, {*(get_4() + 1)} }}</DisplayString>
@@ -128,7 +132,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_y">
+			<Synthetic Name="extents_x">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_5())}, {*(get_5() + 1)}, {*(get_5() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_5())}, {*(get_5() + 1)}, {*(get_5() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_5())}, {*(get_5() + 1)} }}</DisplayString>
@@ -142,7 +146,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_z">
+			<Synthetic Name="extents_y">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_6())}, {*(get_6() + 1)}, {*(get_6() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_6())}, {*(get_6() + 1)}, {*(get_6() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_6())}, {*(get_6() + 1)} }}</DisplayString>
@@ -156,8 +160,21 @@
 				</Expand>
 			</Synthetic>
 
-		</Expand>
+			<Synthetic Name="extents_z">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_7())}, {*(get_7() + 1)}, {*(get_7() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_7())}, {*(get_7() + 1)}, {*(get_7() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_7())}, {*(get_7() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_7())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_7()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
 
+		</Expand>
 	</Type>
 
 	<Type Name="rt::soa_span&lt;rt::boxes&gt;">
@@ -167,12 +184,12 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;size_t*&gt;(arr_->impl_.columns[0]) + offset_"
+			Expression="reinterpret_cast&lt;rt::box*&gt;(arr_->impl_.columns[0]) + offset_"
 		/>
 
 		<Intrinsic
 			Name="get_1"
-			Expression="reinterpret_cast&lt;float*&gt;(arr_->impl_.columns[1]) + offset_"
+			Expression="reinterpret_cast&lt;size_t*&gt;(arr_->impl_.columns[1]) + offset_"
 		/>
 
 		<Intrinsic
@@ -200,13 +217,16 @@
 			Expression="reinterpret_cast&lt;float*&gt;(arr_->impl_.columns[6]) + offset_"
 		/>
 
+		<Intrinsic
+			Name="get_7"
+			Expression="reinterpret_cast&lt;float*&gt;(arr_->impl_.columns[7]) + offset_"
+		/>
+
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
-
 			<Item Name="[size]">size()</Item>
 
-			<Synthetic Name="material">
+			<Synthetic Name="value">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_0())}, {*(get_0() + 1)} }}</DisplayString>
@@ -220,7 +240,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_x">
+			<Synthetic Name="material">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_1())}, {*(get_1() + 1)} }}</DisplayString>
@@ -234,7 +254,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_y">
+			<Synthetic Name="center_x">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_2())}, {*(get_2() + 1)} }}</DisplayString>
@@ -248,7 +268,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="center_z">
+			<Synthetic Name="center_y">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_3())}, {*(get_3() + 1)} }}</DisplayString>
@@ -262,7 +282,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_x">
+			<Synthetic Name="center_z">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_4())}, {*(get_4() + 1)} }}</DisplayString>
@@ -276,7 +296,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_y">
+			<Synthetic Name="extents_x">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_5())}, {*(get_5() + 1)}, {*(get_5() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_5())}, {*(get_5() + 1)}, {*(get_5() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_5())}, {*(get_5() + 1)} }}</DisplayString>
@@ -290,7 +310,7 @@
 				</Expand>
 			</Synthetic>
 
-			<Synthetic Name="extents_z">
+			<Synthetic Name="extents_y">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_6())}, {*(get_6() + 1)}, {*(get_6() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_6())}, {*(get_6() + 1)}, {*(get_6() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_6())}, {*(get_6() + 1)} }}</DisplayString>
@@ -304,8 +324,21 @@
 				</Expand>
 			</Synthetic>
 
-		</Expand>
+			<Synthetic Name="extents_z">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_7())}, {*(get_7() + 1)}, {*(get_7() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_7())}, {*(get_7() + 1)}, {*(get_7() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_7())}, {*(get_7() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_7())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_7()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
 
+		</Expand>
 	</Type>
 
 	<!--================================================================================================================
@@ -324,7 +357,6 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
 
 			<Item Name="[size]">size()</Item>
@@ -346,7 +378,6 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
 
 	<Type Name="rt::soa_span&lt;rt::materials&gt;">
@@ -360,9 +391,7 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
-
 			<Item Name="[size]">size()</Item>
 
 			<Synthetic Name="colour">
@@ -380,7 +409,6 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
 
 	<!--================================================================================================================
@@ -424,7 +452,6 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
 
 			<Item Name="[size]">size()</Item>
@@ -516,7 +543,6 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
 
 	<Type Name="rt::soa_span&lt;rt::planes&gt;">
@@ -555,9 +581,7 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
-
 			<Item Name="[size]">size()</Item>
 
 			<Synthetic Name="value">
@@ -645,7 +669,6 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
 
 	<!--================================================================================================================
@@ -689,7 +712,6 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
 
 			<Item Name="[size]">size()</Item>
@@ -781,7 +803,6 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
 
 	<Type Name="rt::soa_span&lt;rt::spheres&gt;">
@@ -820,9 +841,7 @@
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
-
 		<Expand>
-
 			<Item Name="[size]">size()</Item>
 
 			<Synthetic Name="value">
@@ -910,8 +929,5 @@
 			</Synthetic>
 
 		</Expand>
-
 	</Type>
-
 </AutoVisualizer>
-
