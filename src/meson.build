@@ -20,6 +20,7 @@ file_names = [
 cpp_files = []
 extra_files = []
 extra_files += scene_files
+extra_files += global_extra_files
 foreach name : file_names
 	foreach suffix : ['.hpp','.cpp','.toml','.natvis']
 		if fs.is_file(name + suffix)

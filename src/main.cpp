@@ -32,8 +32,8 @@ namespace
 			}
 			catch (const std::exception& ex)
 			{
-				std::cerr << "FATAL ERROR: " << ex.what() << "\n";
-				window::error_message_box("FATAL ERROR", ex.what());
+				std::cerr << "ERROR: " << ex.what() << "\n";
+				window::error_message_box("ERROR", ex.what());
 				return false;
 			}
 		};
