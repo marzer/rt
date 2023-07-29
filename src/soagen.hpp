@@ -487,7 +487,7 @@
 
 #ifndef SOAGEN_ENABLE_IF
 	#if !SOAGEN_DOXYGEN
-		#define SOAGEN_ENABLE_IF_T(T, ...) typename std::enable_if<!!(__VA_ARGS__), T>::type
+		#define SOAGEN_ENABLE_IF_T(T, ...) std::enable_if_t<!!(__VA_ARGS__), T>
 		#define SOAGEN_ENABLE_IF(...)	   , SOAGEN_ENABLE_IF_T(int, __VA_ARGS__) = 0
 	#else
 		#define SOAGEN_ENABLE_IF_T(T, ...)
@@ -1254,6 +1254,9 @@ namespace soagen
 	using make_cref = std::add_lvalue_reference_t<std::add_const_t<std::remove_reference_t<T>>>;
 
 	template <typename T>
+	using coerce_ref = std::conditional_t<std::is_reference_v<T>, T, std::add_lvalue_reference_t<T>>;
+
+	template <typename T>
 	inline constexpr bool is_cv = !std::is_same_v<std::remove_cv_t<T>, T>;
 
 	template <typename T>
@@ -1859,9 +1862,7 @@ namespace soagen
 	}
 	template <typename Table, size_t... Columns>
 	using row_type = POXY_IMPLEMENTATION_DETAIL(
-		typename detail::row_type_<
-			std::conditional_t<std::is_reference_v<Table>, Table, std::add_lvalue_reference_t<Table>>,
-			std::index_sequence<Columns...>>::type);
+		typename detail::row_type_<coerce_ref<Table>, std::index_sequence<Columns...>>::type);
 }
 
 namespace std
@@ -3483,11 +3484,15 @@ namespace soagen
 		static_assert(std::is_reference_v<param_type> || !is_cv<param_type>,
 					  "value parameters may not be cv-qualified");
 		static_assert(Base::template is_constructible<param_type>);
+
 		using param_forward_type = forward_type<param_type>;
 
 		using rvalue_type = soagen::rvalue_type<param_type>;
 		static_assert(Base::template is_constructible<rvalue_type>);
+
 		using rvalue_forward_type = forward_type<rvalue_type>;
+
+		using default_emplace_type = make_cref<rvalue_type>;
 
 		static constexpr size_t alignment = max(Align, alignof(value_type));
 		static_assert(has_single_bit(alignment), "column alignment must be a power of two");
@@ -4645,6 +4650,37 @@ namespace soagen
 
 		static constexpr bool rvalue_type_list_is_distinct = POXY_IMPLEMENTATION_DETAIL(
 			!(std::is_same_v<typename Columns::param_type, typename Columns::rvalue_type> && ...));
+
+		template <typename BackingTable, typename... Args>
+		static constexpr bool emplace_back_is_nothrow =
+			noexcept(std::declval<BackingTable>().emplace_back(std::declval<Args>()...));
+
+		template <typename BackingTable>
+		static constexpr bool push_back_is_nothrow =
+			emplace_back_is_nothrow<BackingTable, typename Columns::param_forward_type...>;
+
+		template <typename BackingTable>
+		static constexpr bool rvalue_push_back_is_nothrow =
+			emplace_back_is_nothrow<BackingTable, typename Columns::rvalue_forward_type...>;
+
+		template <typename BackingTable, typename Row>
+		static constexpr bool row_push_back_is_nothrow = emplace_back_is_nothrow<BackingTable, Row>;
+
+		template <typename BackingTable, typename... Args>
+		static constexpr bool emplace_is_nothrow =
+			noexcept(std::declval<BackingTable>().emplace(typename remove_cvref<BackingTable>::size_type{},
+														  std::declval<Args>()...));
+
+		template <typename BackingTable>
+		static constexpr bool insert_is_nothrow =
+			emplace_is_nothrow<BackingTable, typename Columns::param_forward_type...>;
+
+		template <typename BackingTable>
+		static constexpr bool rvalue_insert_is_nothrow =
+			emplace_is_nothrow<BackingTable, typename Columns::rvalue_forward_type...>;
+
+		template <typename BackingTable, typename Row>
+		static constexpr bool row_insert_is_nothrow = emplace_is_nothrow<BackingTable, Row>;
 
 		template <typename Func, bool Const = false>
 		static constexpr bool for_each_column_ptr_invocable = POXY_IMPLEMENTATION_DETAIL( //
@@ -5835,11 +5871,13 @@ namespace soagen::detail
 		{
 			SOAGEN_ASSUME(pos < base::count_);
 
-			Traits::move_assign_rows(base::alloc_.columns,
-									 pos,
-									 base::alloc_.columns,
-									 pos + 1u,
-									 base::count_ - pos - 1u);
+			if (pos + 1u < base::count_)
+				Traits::move_assign_rows(base::alloc_.columns,
+										 pos,
+										 base::alloc_.columns,
+										 pos + 1u,
+										 base::count_ - pos - 1u);
+
 			base::pop_back();
 		}
 	};
@@ -6228,49 +6266,6 @@ SOAGEN_POP_WARNINGS;
 
 namespace soagen::mixins
 {
-	//--- erase() ------------------------------------------------------------------------------------------------------
-
-	template <typename Derived, bool = has_erase_member<table_type<Derived>, typename table_type<Derived>::size_type>>
-	struct SOAGEN_EMPTY_BASES erasable
-	{
-		using table_type = soagen::table_type<Derived>;
-		using size_type	 = typename table_type::size_type;
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		void erase(size_type pos) //
-			noexcept(soagen::has_nothrow_erase_member<table_type, size_type>)
-		{
-			static_cast<Derived&>(*this).table().erase(pos);
-		}
-	};
-
-	template <typename Derived>
-	struct SOAGEN_EMPTY_BASES erasable<Derived, false>
-	{};
-
-	//--- unordered_erase() --------------------------------------------------------------------------------------------
-
-	template <typename Derived,
-			  bool = has_unordered_erase_member<table_type<Derived>, typename table_type<Derived>::size_type>>
-	struct SOAGEN_EMPTY_BASES unordered_erasable
-	{
-		using table_type = soagen::table_type<Derived>;
-		using size_type	 = typename table_type::size_type;
-
-		SOAGEN_ALWAYS_INLINE
-		SOAGEN_CPP20_CONSTEXPR
-		soagen::optional<size_type> unordered_erase(size_type pos) //
-			noexcept(soagen::has_nothrow_unordered_erase_member<table_type, size_type>)
-		{
-			return static_cast<Derived&>(*this).table().unordered_erase(pos);
-		}
-	};
-
-	template <typename Derived>
-	struct SOAGEN_EMPTY_BASES unordered_erasable<Derived, false>
-	{};
-
 	//--- resize() -----------------------------------------------------------------------------------------------------
 
 	template <typename Derived, bool = has_resize_member<table_type<Derived>, typename table_type<Derived>::size_type>>
@@ -6466,12 +6461,17 @@ namespace soagen
 	namespace detail
 	{
 		// iterator implicit conversions are allowed when:
+		// - changing columns
 		// - losing rvalue (Table&& -> Table&), (const Table&& -> const Table&)
-		// - gaining const without changing ref  (Table& -> const Table&, Table&& -> const Table&&)
-		// - both (Table&& -> const Table&)
+		// - gaining const (Table& -> const Table&, Table&& -> const Table&&)
+		// - any combination of the three
 
 		template <typename From, typename To>
 		inline constexpr bool iterator_implicit_conversion_ok = false;
+
+		template <typename Table, size_t... ColumnsA, size_t... ColumnsB>
+		inline constexpr bool iterator_implicit_conversion_ok<iterator<Table, ColumnsA...>, //
+															  iterator<Table, ColumnsB...>> = true;
 
 		template <typename Table, size_t... ColumnsA, size_t... ColumnsB>
 		inline constexpr bool iterator_implicit_conversion_ok<iterator<Table&&, ColumnsA...>, //
@@ -6523,9 +6523,16 @@ namespace soagen
 				return &value;
 			}
 		};
+
+		template <typename Table>
+		struct iterator_storage
+		{
+			std::add_const_t<remove_cvref<Table>>* table;
+			typename remove_cvref<Table>::difference_type offset;
+		};
 	}
 	template <typename Table, size_t... Columns>
-	class iterator
+	class iterator SOAGEN_HIDDEN_BASE(protected detail::iterator_storage<remove_cvref<Table>>)
 	{
 	  public:
 		using table_type = remove_cvref<Table>;
@@ -6552,15 +6559,15 @@ namespace soagen
 #endif
 
 	  private:
-		using const_table_ptr = std::add_pointer_t<std::add_const_t<std::remove_reference_t<table_ref>>>;
-		using table_ptr		  = std::add_pointer_t<std::remove_reference_t<table_ref>>;
-		table_ptr table_;
-		difference_type offset_;
+		using base		= detail::iterator_storage<remove_cvref<Table>>;
+		using table_ptr = std::add_pointer_t<std::remove_reference_t<Table>>;
+
+		template <typename, size_t...>
+		friend class soagen::iterator;
 
 		SOAGEN_NODISCARD_CTOR
-		constexpr iterator(table_ptr tbl, difference_type offset) noexcept //
-			: table_{ tbl },
-			  offset_{ offset }
+		constexpr iterator(base b) noexcept //
+			: base{ b }
 		{}
 
 	  public:
@@ -6568,26 +6575,26 @@ namespace soagen
 		constexpr iterator() noexcept = default;
 
 		SOAGEN_NODISCARD_CTOR
-		constexpr iterator(table_ref tbl, difference_type offset) noexcept //
-			: iterator{ &tbl, offset }
+		constexpr iterator(table_ref tbl, difference_type pos) noexcept //
+			: base{ &tbl, pos }
 		{}
 
 		friend constexpr iterator& operator++(iterator& it) noexcept // pre
 		{
-			++it.offset_;
+			++it.offset;
 			return it;
 		}
 
 		friend constexpr iterator operator++(iterator& it, int) noexcept // post
 		{
 			iterator pre = it;
-			++it.offset_;
+			++it.offset;
 			return pre;
 		}
 
 		friend constexpr iterator& operator+=(iterator& it, difference_type n) noexcept
 		{
-			it.offset_ += n;
+			it.offset += n;
 			return it;
 		}
 
@@ -6601,14 +6608,14 @@ namespace soagen
 
 		friend constexpr iterator& operator--(iterator& it) noexcept // pre
 		{
-			--it.offset_;
+			--it.offset;
 			return it;
 		}
 
 		friend constexpr iterator operator--(iterator& it, int) noexcept // post
 		{
 			iterator pre = it;
-			--it.offset_;
+			--it.offset;
 			return pre;
 		}
 
@@ -6625,18 +6632,19 @@ namespace soagen
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_GETTER
-		friend constexpr difference_type operator-(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr difference_type operator-(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.offset_ - rhs.offset_;
+			return base::offset - rhs.offset;
 		}
 
 		SOAGEN_PURE_GETTER
 		constexpr reference operator*() const noexcept
 		{
-			SOAGEN_ASSUME(!!table_);
-			SOAGEN_ASSUME(offset_ >= 0);
+			SOAGEN_ASSUME(!!base::table);
+			SOAGEN_ASSUME(base::offset >= 0);
 
-			return static_cast<table_ref>(*table_).template row<Columns...>(static_cast<size_type>(offset_));
+			return static_cast<table_ref>(*const_cast<table_ptr>(base::table))
+				.template row<Columns...>(static_cast<size_type>(base::offset));
 		}
 
 		SOAGEN_PURE_INLINE_GETTER
@@ -6648,17 +6656,18 @@ namespace soagen
 		SOAGEN_PURE_GETTER
 		constexpr reference operator[](difference_type offset) const noexcept
 		{
-			SOAGEN_ASSUME(!!table_);
-			SOAGEN_ASSUME(offset_ + offset >= 0);
+			SOAGEN_ASSUME(!!base::table);
+			SOAGEN_ASSUME(base::offset + offset >= 0);
 
-			return static_cast<table_ref>(*table_).template row<Columns...>(static_cast<size_type>(offset_ + offset));
+			return static_cast<table_ref>(*const_cast<table_ptr>(base::table))
+				.template row<Columns...>(static_cast<size_type>(base::offset + offset));
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_GETTER
-		friend constexpr bool operator==(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr bool operator==(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.table_ == rhs.table_ && lhs.offset_ == rhs.offset_;
+			return base::table == rhs.table && base::offset == rhs.offset;
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
@@ -6670,30 +6679,30 @@ namespace soagen
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		friend constexpr bool operator<(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr bool operator<(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.offset_ < rhs.offset_;
+			return base::offset < rhs.offset;
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		friend constexpr bool operator<=(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr bool operator<=(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.offset_ <= rhs.offset_;
+			return base::offset <= rhs.offset;
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		friend constexpr bool operator>(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr bool operator>(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.offset_ > rhs.offset_;
+			return base::offset > rhs.offset;
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::same_table_type<Table, T>), typename T, size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		friend constexpr bool operator>=(const iterator& lhs, const iterator<T, Cols...>& rhs) noexcept
+		constexpr bool operator>=(const iterator<T, Cols...>& rhs) const noexcept
 		{
-			return lhs.offset_ >= rhs.offset_;
+			return base::offset >= rhs.offset;
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((detail::iterator_implicit_conversion_ok<iterator, iterator<T, Cols...>>
@@ -6701,12 +6710,9 @@ namespace soagen
 									typename T,
 									size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		constexpr operator iterator<T, Cols...>() noexcept
+		constexpr operator iterator<T, Cols...>() const noexcept
 		{
-			using dest_type = iterator<T, Cols...>;
-			using dest_ptr	= typename dest_type::table_ptr;
-
-			return dest_type{ const_cast<dest_ptr>(static_cast<const_table_ptr>(table_)), offset_ };
+			return iterator<T, Cols...>{ static_cast<const base&>(*this) };
 		}
 
 		SOAGEN_CONSTRAINED_TEMPLATE((!detail::iterator_implicit_conversion_ok<iterator, iterator<T, Cols...>>
@@ -6714,26 +6720,23 @@ namespace soagen
 									typename T,
 									size_t... Cols)
 		SOAGEN_PURE_INLINE_GETTER
-		explicit constexpr operator iterator<T, Cols...>() noexcept
+		explicit constexpr operator iterator<T, Cols...>() const noexcept
 		{
-			using dest_type = iterator<T, Cols...>;
-			using dest_ptr	= typename dest_type::table_ptr;
-
-			return dest_type{ const_cast<dest_ptr>(static_cast<const_table_ptr>(table_)), offset_ };
+			return iterator<T, Cols...>{ static_cast<const base&>(*this) };
 		}
 
 		SOAGEN_PURE_INLINE_GETTER
-		explicit constexpr operator difference_type() noexcept
+		explicit constexpr operator difference_type() const noexcept
 		{
-			return offset_;
+			return base::offset;
 		}
 
 		SOAGEN_PURE_INLINE_GETTER
-		explicit constexpr operator size_type() noexcept
+		explicit constexpr operator size_type() const noexcept
 		{
-			SOAGEN_ASSUME(offset_ >= 0);
+			SOAGEN_ASSUME(base::offset >= 0);
 
-			return static_cast<size_type>(offset_);
+			return static_cast<size_type>(base::offset);
 		}
 	};
 
@@ -6782,9 +6785,7 @@ namespace soagen
 	}
 	template <typename Table, size_t... Columns>
 	using iterator_type = POXY_IMPLEMENTATION_DETAIL(
-		typename detail::iterator_type_<
-			std::conditional_t<std::is_reference_v<Table>, Table, std::add_lvalue_reference_t<Table>>,
-			std::index_sequence<Columns...>>::type);
+		typename detail::iterator_type_<coerce_ref<Table>, std::index_sequence<Columns...>>::type);
 }
 
 #if SOAGEN_ALWAYS_OPTIMIZE
