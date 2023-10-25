@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT
 
 fs = import('fs')
-file_names = [
+exe_file_names = [
 	'common',
 	'soa',
 	'main',
@@ -17,50 +17,54 @@ file_names = [
 	'simd_ray_tracer',
 	'colour',
 ]
-cpp_files = []
-extra_files = []
-extra_files += scene_files
-extra_files += global_extra_files
-foreach name : file_names
+exe_cpp_files = []
+exe_extra_files = []
+exe_extra_files += scene_files
+exe_extra_files += global_extra_files
+foreach name : exe_file_names
 	foreach suffix : ['.hpp','.cpp','.toml','.natvis']
 		if fs.is_file(name + suffix)
 			if suffix == '.cpp'
-				cpp_files += files(name + suffix)
+				exe_cpp_files += files(name + suffix)
 			else
-				extra_files += files(name + suffix)
+				exe_extra_files += files(name + suffix)
 			endif
 		endif
 	endforeach
 endforeach
 
+exe_dependencies = []
+exe_dependencies += global_dependencies
+exe_dependencies += subproject('muu', default_options: subproject_overrides).get_variable('muu_dep')
+exe_dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2_dep')
+exe_dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2main_dep')
+exe_dependencies += subproject('xsimd', default_options: subproject_overrides).get_variable('xsimd_dep')
+exe_dependencies += subproject('tomlplusplus', default_options: subproject_overrides).get_variable('tomlplusplus_dep')
+exe_dependencies += subproject('argparse').get_variable('argparse_dep')
 
-dependencies = []
-dependencies += global_dependencies
-dependencies += subproject('muu', default_options: subproject_overrides).get_variable('muu_dep')
-dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2_dep')
-dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2main_dep')
-dependencies += subproject('xsimd', default_options: subproject_overrides).get_variable('xsimd_dep')
-dependencies += subproject('tomlplusplus', default_options: subproject_overrides).get_variable('tomlplusplus_dep')
+exe_includes = []
+exe_includes += vendor_includes
 
-args = []
-args += global_args
+exe_args = []
+exe_args += global_args
 
-link_args = []
-link_args += global_link_args
+exe_link_args = []
+exe_link_args += global_link_args
 
-overrides = []
-overrides += global_overrides
-overrides += [
+exe_overrides = []
+exe_overrides += global_overrides
+exe_overrides += [
 	'warning_level=3',
 	'werror=true'
 ]
 
 exe = executable(
 	meson.project_name(),
-	cpp_files,
-	cpp_args: args,
-	link_args: global_link_args,
-	dependencies: dependencies,
-	override_options: overrides,
-	extra_files: extra_files
+	exe_cpp_files,
+	cpp_args: exe_args,
+	link_args: exe_link_args,
+	dependencies: exe_dependencies,
+	override_options: exe_overrides,
+	extra_files: exe_extra_files,
+	include_directories: exe_includes
 )

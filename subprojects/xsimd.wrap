@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/marzer/xsimd.git
-revision = 6134acf8f1ea66e8a2df542755061ad93821aa18
+revision = d0912658937d635dd3ded87f08f901e4245aa6b8
 depth = 1
 clone-recursive = false
 

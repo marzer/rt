@@ -6,6 +6,7 @@
 #include "simd_ray_tracer.hpp"
 MUU_DISABLE_WARNINGS;
 #include <memory>
+#include <filesystem>
 #include <iostream>
 #include <exception>
 #include <SDL_main.h>
@@ -15,25 +16,50 @@ MUU_DISABLE_WARNINGS;
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
+namespace fs = std::filesystem;
 
 namespace
 {
 	static std::atomic_bool should_quit = false;
 
+	template <typename Char, typename... Args>
+	static void print(std::basic_ostream<Char>& os, Args&&... args)
+	{
+		(os << ... << static_cast<Args&&>(args));
+		os << "\n"sv;
+	}
+
+	template <typename... Args>
+	static void log(Args&&... args)
+	{
+		print(std::cout, static_cast<Args&&>(args)...);
+	}
+
+	template <typename... Args>
+	static void error(Args&&... args)
+	{
+		print(std::cerr, "error: ", static_cast<Args&&>(args)...);
+	}
+
 	static void run(std::span<const char*> args)
 	{
+		log("working directory: ", fs::current_path().string());
+
 		rt::scene scene;
 		const auto reload = [&]()
 		{
 			try
 			{
 				scene = scene::load(args.empty() ? "" : args[0]);
+				if (!scene.path.empty())
+					log("scene '", scene.path, "' loaded.");
+				else
+					log("scene loaded.");
 				return true;
 			}
 			catch (const std::exception& ex)
 			{
-				std::cerr << "ERROR: " << ex.what() << "\n";
-				window::error_message_box("ERROR", ex.what());
+				error(ex.what());
 				return false;
 			}
 		};
@@ -54,10 +80,7 @@ namespace
 					   {
 						   case ' ':
 							   if (reload())
-							   {
-								   scene.low_res_mode = win.low_res_mode;
-								   dirty			  = true;
-							   }
+								   dirty = true;
 							   break;
 
 						   case 97: move_dir.x += 1; break;
@@ -87,17 +110,15 @@ namespace
 						   if (!muu::approx_zero(move))
 						   {
 							   scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
-							   dirty			  = true;
-							   low_res_mode_time  = clock::now();
-							   win.low_res_mode	  = true;
-							   scene.low_res_mode = true;
+							   dirty			 = true;
+							   low_res_mode_time = clock::now();
+							   win.low_res_mode	 = true;
 						   }
 					   }
 					   else if (to_seconds(clock::now() - low_res_mode_time) >= 1.0f && win.low_res_mode)
 					   {
-						   win.low_res_mode	  = false;
-						   scene.low_res_mode = false;
-						   dirty			  = true;
+						   win.low_res_mode = false;
+						   dirty			= true;
 					   }
 
 					   backbuffer_dirty = dirty;
@@ -121,14 +142,12 @@ int main(int argc, char** argv)
 	}
 	catch (const std::exception& ex)
 	{
-		std::cerr << "FATAL ERROR: " << ex.what() << "\n";
-		window::error_message_box("FATAL ERROR", ex.what());
+		error(ex.what());
 		return 1;
 	}
 	catch (...)
 	{
-		std::cerr << "FATAL ERROR: An unspecified error occurred.\n";
-		window::error_message_box("FATAL ERROR", "An unspecified error occurred.");
+		error("An unspecified internal error occurred.");
 		return 1;
 	}
 

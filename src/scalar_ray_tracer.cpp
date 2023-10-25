@@ -135,22 +135,20 @@ void MUU_VECTORCALL scalar_ray_tracer::render(const rt::scene& scene,
 											  image_view& pixels,
 											  muu::thread_pool& threads) noexcept
 {
-	const auto view	   = scene.camera.viewport(pixels.size());
-	const auto samples = scene.low_res_mode ? std::min(scene.samples_per_pixel, 5u) : scene.samples_per_pixel;
-	const auto bounces = scene.low_res_mode ? std::min(scene.max_bounces, 5u) : scene.max_bounces;
+	const auto view = scene.camera.viewport(pixels.size());
 
 	const auto worker = [=, &scene](unsigned pixel_index) noexcept
 	{
 		const auto screen_pos = pixels.position_of(pixel_index);
 
 		rt::colour colour{};
-		for (unsigned i = 0, e = samples; i < e; i++)
+		for (unsigned i = 0, e = scene.samples_per_pixel; i < e; i++)
 		{
 			const auto pos	= vec2{ screen_pos } + random<vec2>();
 			const auto near = view.screen_to_world(pos, 0.0f);
 			const auto far	= view.screen_to_world(pos, 1.0f);
 
-			colour += trace(scene, ray{ near, vec3::direction(near, far) }, bounces);
+			colour += trace(scene, ray{ near, vec3::direction(near, far) }, scene.max_bounces);
 		}
 		colour.xyz /= static_cast<float>(scene.samples_per_pixel);
 		colour.x = std::sqrt(colour.x);

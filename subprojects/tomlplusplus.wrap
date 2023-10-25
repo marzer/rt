@@ -1,6 +1,6 @@
 [wrap-git]
 url = https://github.com/marzer/tomlplusplus.git
-revision = 4a28c36c435d813ddbd39a9a48a79d8c862c547f
+revision = f1a38d23b7d93a66f8d9fbcf533ee7f2d4ea21c9
 depth = 1
 clone-recursive = false
 

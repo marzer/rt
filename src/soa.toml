@@ -1,7 +1,7 @@
 namespace = 'rt'
 
 [hpp]
-internal_includes = [ 'common.hpp', 'colour.hpp' ]
+includes.internal = [ 'common.hpp', 'colour.hpp' ]
 
 [structs.materials]
 variables = [

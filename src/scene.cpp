@@ -5,11 +5,14 @@ MUU_DISABLE_WARNINGS;
 #include <sstream>
 #include <stdexcept>
 #include <concepts>
+#include <filesystem>
+#include <optional>
 #include <muu/type_name.h>
 #include <muu/hashing.h>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -432,18 +435,53 @@ namespace
 	}
 }
 
-scene scene::load(std::string_view path)
+scene scene::load(std::string_view path_sv)
 {
-	if (path.empty())
+	if (path_sv.empty())
 		throw std::runtime_error{ "no scene file path provided" };
 
 	scene s;
+	toml::table config;
+	if (path_sv == "-"sv)
+	{
+		config = toml::parse(std::cin, "stdin"sv);
+	}
+	else
+	{
+		fs::path path{ path_sv };
+		path.make_preferred();
 
-	auto config = path == "-"sv ? toml::parse(std::cin, "stdin"sv) : toml::parse_file(path);
+		bool ok = false;
+		if (path.is_relative())
+		{
+			for (auto root : { ""sv, "scenes/"sv, "../"sv, "../scenes/"sv, "../../"sv, "../../scenes/"sv })
+			{
+				auto p = path;
+				if (!root.empty())
+					p = fs::path{ root } / p;
+
+				if (fs::is_regular_file(p))
+				{
+					path = std::move(p);
+					ok	 = true;
+					break;
+				}
+			}
+		}
+		else
+		{
+			ok = fs::is_regular_file(path);
+		}
+
+		if (!ok)
+			throw std::runtime_error{ "scene path '"s + path.string() + "' did not exist or was not a file" };
+
+		config = toml::parse_file(path.string());
+		s.path = path.string();
+	}
 
 	s.samples_per_pixel = muu::clamp(deserialize(config, "samples_per_pixel", 30u), 1u, 1000u);
 	s.max_bounces		= muu::clamp(deserialize(config, "max_bounces", 10u), 1u, 1000u);
-	s.low_res_mode		= false;
 
 	if (auto camera = get_table(config, "camera"))
 	{

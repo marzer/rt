@@ -201,14 +201,15 @@ global_dependencies = []
 
 global_overrides = [ ]
 
-subproject_overrides = [ 'werror=false', 'warning_level=1', 'default_library=static' ]
+subproject_overrides = [ 'werror=false', 'warning_level=1', 'default_library=static', 'buildtype=release' ]
 
 #-----------------------------------------------------------------------------------------------------------------------
 # subdirectories + files
 #-----------------------------------------------------------------------------------------------------------------------
 
-global_extra_files = files('README.md', 'LICENSE.txt', '.gitattributes', '.gitignore', '.clang-format')
+global_extra_files = files('README.md', 'LICENSE.txt', '.gitattributes', '.gitignore', '.clang-format', '.editorconfig')
 
+subdir('vendor')
 subdir('scenes')
 subdir('src')
 
