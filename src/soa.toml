@@ -11,7 +11,7 @@ variables = [
 [structs.planes]
 variables = [
 	{ name = 'value',    type = 'rt::plane' },
-	{ name = 'material', type = 'size_t'    },
+	{ name = 'material', type = 'unsigned',  alignment = 32 },
 	{ name = 'normal_x', type = 'float',     alignment = 32 },
 	{ name = 'normal_y', type = 'float',     alignment = 32 },
 	{ name = 'normal_z', type = 'float',     alignment = 32 },
@@ -21,21 +21,21 @@ variables = [
 [structs.spheres]
 variables = [
 	{ name = 'value',    type = 'rt::sphere' },
-	{ name = 'material', type = 'size_t'    },
-	{ name = 'center_x', type = 'float',      alignment = 32 },
-	{ name = 'center_y', type = 'float',      alignment = 32 },
-	{ name = 'center_z', type = 'float',      alignment = 32 },
-	{ name = 'radius',   type = 'float',      alignment = 32 },
+	{ name = 'material', type = 'unsigned',  alignment = 32 },
+	{ name = 'center_x', type = 'float',     alignment = 32 },
+	{ name = 'center_y', type = 'float',     alignment = 32 },
+	{ name = 'center_z', type = 'float',     alignment = 32 },
+	{ name = 'radius',   type = 'float',     alignment = 32 },
 ]
 
 [structs.boxes]
 variables = [
 	{ name = 'value',    type = 'rt::box' },
-	{ name = 'material', type = 'size_t'    },
-	{ name = 'center_x', type = 'float',  alignment = 32 },
-	{ name = 'center_y', type = 'float',  alignment = 32 },
-	{ name = 'center_z', type = 'float',  alignment = 32 },
-	{ name = 'extents_x', type = 'float', alignment = 32 },
-	{ name = 'extents_y', type = 'float', alignment = 32 },
-	{ name = 'extents_z', type = 'float', alignment = 32 },
+	{ name = 'material', type = 'unsigned', alignment = 32 },
+	{ name = 'center_x', type = 'float',    alignment = 32 },
+	{ name = 'center_y', type = 'float',    alignment = 32 },
+	{ name = 'center_z', type = 'float',    alignment = 32 },
+	{ name = 'extents_x', type = 'float',   alignment = 32 },
+	{ name = 'extents_y', type = 'float',   alignment = 32 },
+	{ name = 'extents_z', type = 'float',   alignment = 32 },
 ]

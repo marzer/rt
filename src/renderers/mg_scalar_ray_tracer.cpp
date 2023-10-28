@@ -1,7 +1,8 @@
-#include "scalar_ray_tracer.hpp"
-#include "scene.hpp"
-#include "image.hpp"
-#include "colour.hpp"
+#include "../scene.hpp"
+#include "../image.hpp"
+#include "../colour.hpp"
+#include "../random.hpp"
+#include "../renderer.hpp"
 MUU_DISABLE_WARNINGS;
 #include <muu/thread_pool.h>
 #include <muu/bounding_sphere.h>
@@ -113,9 +114,7 @@ namespace
 		if (!hit)
 		{
 #if 1
-			return colour{
-				muu::lerp(colours::white.xyzw, vec4{ 0.5f, 0.7f, 1.0f, 1.0f }, 0.5f * (r.direction.y + 1.0f))
-			};
+			return colour{ vec3::lerp(colours::white.rgb, vec3{ 0.5f, 0.7f, 1.0f }, 0.5f * (r.direction.y + 1.0f)) };
 #else
 			return {};
 #endif
@@ -126,38 +125,43 @@ namespace
 
 		auto col =
 			trace(scene, r.bounce(hit.distance, vec3::normalize(hit.normal + random_unit_vector())), max_bounces);
-		col.xyz *= 0.5f;
+		col.rgb *= 0.5f;
 		return col;
 	}
-}
 
-void MUU_VECTORCALL scalar_ray_tracer::render(const rt::scene& scene,
-											  image_view& pixels,
-											  muu::thread_pool& threads) noexcept
-{
-	const auto view = scene.camera.viewport(pixels.size());
-
-	const auto worker = [=, &scene](unsigned pixel_index) noexcept
+	struct mg_scalar_ray_tracer final : renderer_interface
 	{
-		const auto screen_pos = pixels.position_of(pixel_index);
-
-		rt::colour colour{};
-		for (unsigned i = 0, e = scene.samples_per_pixel; i < e; i++)
+		void MUU_VECTORCALL render(const rt::scene& scene,
+								   image_view& pixels,
+								   muu::thread_pool& threads) noexcept override
 		{
-			const auto pos	= vec2{ screen_pos } + random<vec2>();
-			const auto near = view.screen_to_world(pos, 0.0f);
-			const auto far	= view.screen_to_world(pos, 1.0f);
+			const auto view = scene.camera.viewport(pixels.size());
 
-			colour += trace(scene, ray{ near, vec3::direction(near, far) }, scene.max_bounces);
+			const auto worker = [=, &scene](unsigned pixel_index) noexcept
+			{
+				const auto screen_pos = pixels.position_of(pixel_index);
+
+				rt::colour colour{};
+				for (unsigned i = 0, e = scene.samples_per_pixel; i < e; i++)
+				{
+					const auto pos	= vec2{ screen_pos } + random<vec2>();
+					const auto near = view.screen_to_world(pos, 0.0f);
+					const auto far	= view.screen_to_world(pos, 1.0f);
+
+					colour += trace(scene, ray{ near, vec3::direction(near, far) }, scene.max_bounces);
+				}
+				colour.rgb /= static_cast<float>(scene.samples_per_pixel);
+				colour.r = std::sqrt(colour.r);
+				colour.g = std::sqrt(colour.g);
+				colour.b = std::sqrt(colour.b);
+
+				pixels(screen_pos) = static_cast<uint32_t>(colour);
+			};
+
+			threads.for_range(unsigned{}, pixels.size().x * pixels.size().y, worker);
+			threads.wait();
 		}
-		colour.xyz /= static_cast<float>(scene.samples_per_pixel);
-		colour.x = std::sqrt(colour.x);
-		colour.y = std::sqrt(colour.y);
-		colour.z = std::sqrt(colour.z);
-
-		pixels(screen_pos) = static_cast<uint32_t>(colour);
 	};
 
-	threads.for_range(unsigned{}, pixels.size().x * pixels.size().y, worker);
-	threads.wait();
+	REGISTER_RENDERER(mg_scalar_ray_tracer);
 }

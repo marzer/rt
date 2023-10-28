@@ -13,9 +13,9 @@ exe_file_names = [
 	'window',
 	'camera',
 	'scene',
-	'scalar_ray_tracer',
-	'simd_ray_tracer',
 	'colour',
+	'renderer',
+	'random',
 ]
 exe_cpp_files = []
 exe_extra_files = []
@@ -32,6 +32,8 @@ foreach name : exe_file_names
 		endif
 	endforeach
 endforeach
+
+subdir('renderers')
 
 exe_dependencies = []
 exe_dependencies += global_dependencies

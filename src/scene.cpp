@@ -333,7 +333,7 @@ namespace
 		if (!arr || arr->size() > 4)
 			mismatch_error(node, val);
 
-		val.xyzw = {};
+		val.rgba = {};
 		for (size_t i = 0; i < arr->size(); i++)
 			deserialize((*arr)[i], val.values[i]);
 		if (arr->size() < 4)
@@ -499,9 +499,9 @@ scene scene::load(std::string_view path_sv)
 	if (s.materials.empty())
 		s.materials.push_back(0xFF0080_rgb);
 
-	const auto get_material = [&](const toml::node& parent) -> size_t
+	const auto get_material = [&](const toml::node& parent) -> unsigned
 	{
-		const auto material = deserialize(parent, "material", size_t{});
+		const auto material = deserialize(parent, "material", unsigned{});
 		if (material >= s.materials.size())
 			error(parent, "material index "sv, material, " out-of-range");
 		return material;

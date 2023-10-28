@@ -10,6 +10,9 @@ MUU_ENABLE_WARNINGS;
 
 using namespace rt;
 
+#define window_handle	static_cast<SDL_Window*>(handles_[0])
+#define renderer_handle static_cast<SDL_Renderer*>(handles_[1])
+
 namespace
 {
 	static std::mutex sdl_mx;
@@ -45,6 +48,11 @@ namespace
 		std::at_quick_exit([]() { sdl_shutdown(); });
 	}
 
+#ifdef NDEBUG
+	static constexpr float low_res_factor = 0.33f;
+#else
+	static constexpr float low_res_factor = 0.1f;
+#endif
 }
 
 window::window(std::string_view title, vec2u size) //
@@ -61,19 +69,19 @@ window::window(std::string_view title, vec2u size) //
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
 
-	handles_[1] = SDL_CreateRenderer(static_cast<SDL_Window*>(handles_[0]), -1, SDL_RENDERER_ACCELERATED);
+	handles_[1] = SDL_CreateRenderer(window_handle, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (!handles_[1])
 		throw std::runtime_error{ SDL_GetError() };
 
-	back_buffers_[0] = back_buffer{ size, handles_[1] };
-	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * 0.1f }, handles_[1] };
+	back_buffers_[0] = back_buffer{ size, renderer_handle };
+	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer_handle };
 }
 
 window::window(window&& other) noexcept //
 	: size_{ std::exchange(other.size_, {}) },
 	  handles_{ std::exchange(other.handles_, {}) },
 	  back_buffers_{ std::move(other.back_buffers_) },
-	  low_res_mode{ std::exchange(low_res_mode, {}) }
+	  low_res{ std::exchange(low_res, {}) }
 {}
 
 window& window::operator=(window&& rhs) noexcept
@@ -81,7 +89,7 @@ window& window::operator=(window&& rhs) noexcept
 	size_		  = std::exchange(rhs.size_, {});
 	handles_	  = std::exchange(rhs.handles_, {});
 	back_buffers_ = std::move(rhs.back_buffers_);
-	low_res_mode  = std::exchange(rhs.low_res_mode, {});
+	low_res		  = std::exchange(rhs.low_res, {});
 	return *this;
 }
 
@@ -89,11 +97,21 @@ window::~window() noexcept
 {
 	back_buffers_ = {};
 
-	if (handles_[1])
-		SDL_DestroyRenderer(static_cast<SDL_Renderer*>(handles_[1]));
+	if (renderer_handle)
+		SDL_DestroyRenderer(renderer_handle);
 
-	if (handles_[0])
-		SDL_DestroyWindow(static_cast<SDL_Window*>(handles_[0]));
+	if (window_handle)
+		SDL_DestroyWindow(window_handle);
+}
+
+MUU_PURE
+window::operator bool() const noexcept
+{
+	return window_handle								 //
+		&& renderer_handle								 //
+		&& back_buffers_[static_cast<unsigned>(low_res)] //
+		&& size_.x > 0									 //
+		&& size_.y > 0;
 }
 
 void window::loop(const window_events& ev)
@@ -111,8 +129,16 @@ void window::loop(const window_events& ev)
 				case SDL_QUIT: return;
 
 				case SDL_KEYDOWN:
-					if (ev.key_down)
-						ev.key_down(e.key.keysym.sym);
+					if (e.key.repeat)
+					{
+						if (ev.key_held)
+							ev.key_held(e.key.keysym.sym);
+					}
+					else
+					{
+						if (ev.key_down)
+							ev.key_down(e.key.keysym.sym);
+					}
 					break;
 
 				case SDL_KEYUP:
@@ -122,18 +148,18 @@ void window::loop(const window_events& ev)
 			}
 		}
 
-		auto time	  = clock::now();
-		const auto dt = time - prev_time;
-		prev_time	  = time;
+		auto time = clock::now();
+		auto dt	  = to_seconds(time - prev_time);
+		prev_time = time;
 
 		bool backbuffer_dirty = true;
 		if (ev.update)
 		{
-			if (!ev.update(std::min(to_seconds(dt), 0.25f), backbuffer_dirty))
+			if (!ev.update(std::min(dt, 0.1f), backbuffer_dirty))
 				return;
 		}
 
-		auto& current_back_buffer = back_buffers_[static_cast<unsigned>(low_res_mode)];
+		auto& current_back_buffer = back_buffers_[static_cast<unsigned>(low_res)];
 
 		if (ev.render && current_back_buffer && backbuffer_dirty)
 		{
@@ -143,22 +169,50 @@ void window::loop(const window_events& ev)
 
 		if (current_back_buffer)
 		{
-			SDL_RenderClear(static_cast<SDL_Renderer*>(handles_[1]));
-
-			SDL_RenderCopy(static_cast<SDL_Renderer*>(handles_[1]),
-						   static_cast<SDL_Texture*>(current_back_buffer.handle()),
-						   nullptr,
-						   nullptr);
-
-			SDL_RenderPresent(static_cast<SDL_Renderer*>(handles_[1]));
+			SDL_RenderClear(renderer_handle);
+			SDL_RenderCopy(renderer_handle, static_cast<SDL_Texture*>(current_back_buffer.handle()), nullptr, nullptr);
+			SDL_RenderPresent(renderer_handle);
 		}
 	}
 }
 
-void window::error_message_box(const char* title, const char* msg, const window* parent) noexcept
+MUU_PURE
+std::string_view window::title() const noexcept
 {
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-							 title,
-							 msg,
-							 parent && *parent ? static_cast<SDL_Window*>(parent->handles_[0]) : nullptr);
+	const auto val = SDL_GetWindowTitle(window_handle);
+	if (val)
+		return val;
+	return "";
+}
+
+void window::title(std::string_view val)
+{
+	if (val == title())
+		return;
+
+	if (val.empty())
+	{
+		SDL_SetWindowTitle(window_handle, "");
+		return;
+	}
+
+	SDL_SetWindowTitle(window_handle, std::string(val).c_str());
+}
+
+MUU_PURE
+bool window::get_key(int key_code) noexcept
+{
+	assert(key_code > 0);
+	assert(key_code != SDLK_UNKNOWN);
+
+	const auto scan_code = SDL_GetScancodeFromKey(static_cast<SDL_Keycode>(key_code));
+	if (scan_code < 0 || scan_code == SDL_SCANCODE_UNKNOWN || scan_code >= SDL_NUM_SCANCODES)
+		return false;
+
+	int num_keys{};
+	const auto keys = SDL_GetKeyboardState(&num_keys);
+	if (!keys || scan_code >= num_keys)
+		return false;
+
+	return !!keys[scan_code];
 }

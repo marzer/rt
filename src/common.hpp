@@ -6,9 +6,10 @@ MUU_DISABLE_WARNINGS;
 #include <cstddef>
 #include <cassert>
 #include <utility>
-#include <array>
 #include <string_view>
 #include <chrono>
+#include <type_traits>
+#include <concepts>
 #include <muu/vector.h>
 #include <muu/quaternion.h>
 #include <muu/matrix.h>
@@ -60,6 +61,7 @@ namespace rt
 	struct scene;
 	struct viewport;
 	struct window_events;
+	struct renderer_interface;
 
 	class window;
 	class image;
@@ -73,85 +75,13 @@ namespace rt
 	class spheres;
 	class boxes;
 
-	class MUU_ABSTRACT_INTERFACE ray_tracer_interface
-	{
-	  public:
-		virtual void MUU_VECTORCALL render(const scene&, image_view&, muu::thread_pool&) noexcept = 0;
-
-		virtual ~ray_tracer_interface() noexcept = default;
-	};
-
-	class scalar_ray_tracer;
-	class simd_ray_tracer;
-
 	inline namespace literals
 	{
 		MUU_DISABLE_WARNINGS;
 		using namespace muu::literals;
 		using namespace std::string_view_literals;
+		using namespace std::chrono_literals;
 		MUU_ENABLE_WARNINGS;
-	}
-
-	namespace detail
-	{
-		template <typename>
-		struct randomizer;
-	}
-
-	template <typename T>
-	MUU_ALWAYS_INLINE
-	static T MUU_VECTORCALL random() noexcept
-	{
-		return detail::randomizer<T>::get();
-	}
-
-	namespace detail
-	{
-		[[nodiscard]]
-		float MUU_VECTORCALL random_float() noexcept;
-
-		template <typename>
-		struct randomizer;
-
-		template <std::floating_point Float>
-		struct randomizer<Float>
-		{
-			MUU_ALWAYS_INLINE
-			static Float MUU_VECTORCALL get() noexcept
-			{
-				return static_cast<Float>(random_float());
-			}
-		};
-
-		template <std::floating_point Float, size_t Dimensions>
-		struct randomizer<muu::vector<Float, Dimensions>>
-		{
-			MUU_ALWAYS_INLINE
-			static muu::vector<Float, Dimensions> MUU_VECTORCALL get() noexcept
-			{
-				if constexpr (Dimensions == 2)
-					return muu::vector<Float, Dimensions>{ random<Float>(), random<Float>() };
-				else if constexpr (Dimensions == 3)
-					return muu::vector<Float, Dimensions>{ random<Float>(), random<Float>(), random<Float>() };
-				else if constexpr (Dimensions == 4)
-					return muu::vector<Float, Dimensions>{ random<Float>(),
-														   random<Float>(),
-														   random<Float>(),
-														   random<Float>() };
-			}
-		};
-	}
-
-	[[nodiscard]]
-	inline vec3 MUU_VECTORCALL random_unit_vector() noexcept
-	{
-		while (true)
-		{
-			const auto p = random<vec3>() - vec3::constants::one_over_two;
-			if MUU_UNLIKELY(p == vec3::constants::zero)
-				continue;
-			return vec3::normalize(p);
-		}
 	}
 
 	MUU_PURE_INLINE_GETTER
@@ -159,5 +89,4 @@ namespace rt
 	{
 		return std::chrono::duration<float>{ ns }.count();
 	}
-
 }

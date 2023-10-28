@@ -12,26 +12,19 @@ namespace rt
 	{
 		union
 		{
-			vec4 xyzw;
+			vec4 rgba;
 			struct
 			{
 				union
 				{
-					vec3 xyz;
+					vec3 rgb;
 					struct
 					{
-						float x;
-						float y;
-						float z;
+						float r;
+						float g;
+						float b;
 					};
 				};
-				float w;
-			};
-			struct
-			{
-				float r;
-				float g;
-				float b;
 				float a;
 			};
 			float values[4];
@@ -42,32 +35,49 @@ namespace rt
 
 		MUU_NODISCARD_CTOR
 		explicit constexpr colour(const vec3 rgb, float a = 1.0f) noexcept //
-			: xyzw{ rgb, a }
+			: rgba{ rgb, a }
 		{}
 
 		MUU_NODISCARD_CTOR
 		explicit constexpr colour(const vec4 rgba) noexcept //
-			: xyzw{ rgba }
+			: rgba{ rgba }
+		{}
+
+	  private:
+		template <typename T>
+		MUU_PURE_INLINE_GETTER
+		static constexpr float MUU_VECTORCALL component_value(T val) noexcept
+		{
+			if constexpr (muu::is_floating_point<T>)
+			{
+				return static_cast<float>(val);
+			}
+			else
+			{
+				return muu::clamp(static_cast<float>(static_cast<muu::remove_enum<T>>(val)) / 255.99999f, 0.0f, 1.0f);
+			}
+		}
+
+	  public:
+		template <typename R, typename G, typename B, typename A = float>
+		MUU_NODISCARD_CTOR
+		constexpr colour(R r, G g, B b, A a = 1.0f) noexcept //
+			: rgba{ component_value(r), component_value(g), component_value(b), component_value(a) }
 		{}
 
 		MUU_NODISCARD_CTOR
-		constexpr colour(float r, float g, float b, float a = 1.0f) noexcept //
-			: xyzw{ r, g, b, a }
-		{}
-
-		MUU_NODISCARD_CTOR
-		explicit constexpr colour(uint32_t rgba) noexcept				  //
-			: xyzw{ static_cast<float>((rgba >> 24) & 0xFF) / 255.99999f, //
-					static_cast<float>((rgba >> 16) & 0xFF) / 255.99999f,
-					static_cast<float>((rgba >> 8) & 0xFF) / 255.99999f,
-					static_cast<float>(rgba & 0xFF) / 255.99999f }
+		explicit constexpr colour(uint32_t rgba) noexcept
+			: rgba{ component_value((rgba >> 24) & 0xFF),
+					component_value((rgba >> 16) & 0xFF),
+					component_value((rgba >> 8) & 0xFF),
+					component_value(rgba & 0xFF) }
 		{}
 
 		MUU_PURE_GETTER
 		explicit MUU_VECTORCALL operator uint32_t() const noexcept
 		{
 			const auto src =
-				vec4u{ vec4::clamp(xyzw, vec4::constants::zero, vec4::constants::one) * vec4{ 255.99999f } };
+				vec4u{ vec4::clamp(rgba, vec4::constants::zero, vec4::constants::one) * vec4{ 255.99999f } };
 			return (src.x << 24u) | (src.y << 16u) | (src.z << 8u) | src.w;
 		}
 
@@ -76,7 +86,7 @@ namespace rt
 		MUU_PURE
 		friend constexpr colour& MUU_VECTORCALL operator+=(colour& lhs, colour rhs) noexcept
 		{
-			lhs.xyzw += rhs.xyzw;
+			lhs.rgba += rhs.rgba;
 			return lhs;
 		}
 

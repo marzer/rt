@@ -3,14 +3,16 @@
 #include "back_buffer.hpp"
 MUU_DISABLE_WARNINGS;
 #include <functional>
+#include <array>
 MUU_ENABLE_WARNINGS;
 
 namespace rt
 {
 	struct window_events
 	{
-		std::function<void(int)> key_down;
-		std::function<void(int)> key_up;
+		std::function<void(int /* virtual key code */)> key_down;
+		std::function<void(int /* virtual key code */)> key_held;
+		std::function<void(int /* virtual key code */)> key_up;
 		std::function<bool(float /* delta_time */, bool& /* backbuffer_dirty */)> update;
 		std::function<void(image_view)> render;
 	};
@@ -22,8 +24,11 @@ namespace rt
 		std::array<void*, 2> handles_			 = {};
 		std::array<back_buffer, 2> back_buffers_ = {};
 
+		MUU_PURE_GETTER
+		static bool get_key(int) noexcept;
+
 	  public:
-		bool low_res_mode = false;
+		bool low_res = false;
 
 		window() noexcept = default;
 
@@ -37,19 +42,22 @@ namespace rt
 
 		~window() noexcept;
 
-		MUU_PURE_INLINE_GETTER
-		explicit operator bool() const noexcept
-		{
-			return handles_[0]										  //
-				&& handles_[1]										  //
-				&& back_buffers_[static_cast<unsigned>(low_res_mode)] //
-				&& size_.x > 0										  //
-				&& size_.y > 0;
-		}
+		MUU_PURE_GETTER
+		explicit operator bool() const noexcept;
 
 		void loop(const window_events& ev);
 
-		static void error_message_box(const char* title, const char* msg, const window* = nullptr) noexcept;
+		MUU_PURE_GETTER
+		std::string_view title() const noexcept;
+
+		void title(std::string_view);
+
+		template <typename T, typename... U>
+		MUU_PURE_GETTER
+		bool key(T key_code, U... key_codes) const noexcept
+		{
+			return (get_key(static_cast<int>(key_code)) || ... || get_key(static_cast<int>(key_codes)));
+		}
 	};
 
 	static_assert(!std::is_copy_constructible_v<window>);

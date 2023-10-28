@@ -22,7 +22,7 @@
 
 		<Intrinsic
 			Name="get_1"
-			Expression="reinterpret_cast&lt;size_t*&gt;(table_.alloc_.columns[1])"
+			Expression="reinterpret_cast&lt;unsigned*&gt;(table_.alloc_.columns[1])"
 		/>
 
 		<Intrinsic
@@ -264,7 +264,7 @@
 
 		<Intrinsic
 			Name="get_1"
-			Expression="reinterpret_cast&lt;size_t*&gt;(table_.alloc_.columns[1])"
+			Expression="reinterpret_cast&lt;unsigned*&gt;(table_.alloc_.columns[1])"
 		/>
 
 		<Intrinsic
@@ -415,7 +415,7 @@
 
 		<Intrinsic
 			Name="get_1"
-			Expression="reinterpret_cast&lt;size_t*&gt;(table_.alloc_.columns[1])"
+			Expression="reinterpret_cast&lt;unsigned*&gt;(table_.alloc_.columns[1])"
 		/>
 
 		<Intrinsic

@@ -2,12 +2,12 @@
 #include "window.hpp"
 #include "image.hpp"
 #include "scene.hpp"
-#include "scalar_ray_tracer.hpp"
-#include "simd_ray_tracer.hpp"
+#include "renderer.hpp"
 MUU_DISABLE_WARNINGS;
 #include <memory>
 #include <filesystem>
 #include <iostream>
+#include <numeric>
 #include <exception>
 #include <SDL_main.h>
 #include <atomic>
@@ -41,9 +41,53 @@ namespace
 		print(std::cerr, "error: ", static_cast<Args&&>(args)...);
 	}
 
+	struct renderer
+	{
+		const renderers::description* description;
+		std::unique_ptr<renderer_interface> object;
+
+		MUU_PURE_INLINE_GETTER
+		explicit operator bool() const noexcept
+		{
+			return !!object;
+		}
+
+		MUU_PURE_INLINE_GETTER
+		renderer_interface* operator->() noexcept
+		{
+			return object.get();
+		}
+	};
+
 	static void run(std::span<const char*> args)
 	{
-		log("working directory: ", fs::current_path().string());
+		log("working directory: "sv, fs::current_path().string());
+
+		log("available renderers: "sv);
+		for (auto& r : renderers::all())
+			log("    ", r.name);
+
+		const auto create_renderer = [](std::string_view name) -> renderer
+		{
+			auto desc = renderers::find_by_name(name);
+			if (!desc)
+			{
+				error("no known renderer with name '", name, "'");
+				return {};
+			}
+
+			assert(desc->name == name);
+			assert(desc->create);
+
+			renderer r;
+			r.description = desc;
+			r.object.reset(desc->create());
+			log("created renderer: ", name);
+			return r;
+		};
+
+		renderer regular_renderer = create_renderer("mg_scalar_ray_tracer"sv);
+		renderer low_res_renderer = create_renderer("simple_rasterizer"sv);
 
 		rt::scene scene;
 		const auto reload = [&]()
@@ -52,9 +96,9 @@ namespace
 			{
 				scene = scene::load(args.empty() ? "" : args[0]);
 				if (!scene.path.empty())
-					log("scene '", scene.path, "' loaded.");
+					log("scene '"sv, scene.path, "' loaded."sv);
 				else
-					log("scene loaded.");
+					log("scene loaded."sv);
 				return true;
 			}
 			catch (const std::exception& ex)
@@ -65,71 +109,73 @@ namespace
 		};
 		reload();
 
+		auto win				= window{ "rt"s, { 800, 600 } };
+		const auto update_title = [&]()
+		{
+			std::ostringstream ss;
+			ss << "rt"sv;
+			if (!scene.path.empty())
+				ss << " - "sv << scene.path;
+			if (regular_renderer)
+				ss << " - "sv << regular_renderer.description->name;
+			win.title(ss.str());
+		};
+		update_title();
+
 		muu::thread_pool threads;
+		bool reloaded_this_frame  = true;
+		time_point last_move_time = clock::now() - 1s;
+		win.loop({
+			.key_down =
+				[&](int key) noexcept
+			{
+				log("key down: "sv, key);
 
-		std::unique_ptr<ray_tracer_interface> ray_tracer{ new scalar_ray_tracer };
+				if (key == ' ' && reload())
+				{
+					update_title();
+					reloaded_this_frame = true;
+				}
+			},
 
-		bool dirty					 = true;
-		auto win					 = window{ "rt", { 800, 600 } };
-		vec3 move_dir				 = {};
-		time_point low_res_mode_time = clock::now();
-		win.loop({ .key_down =
-					   [&](int key) noexcept
-				   {
-					   switch (key)
-					   {
-						   case ' ':
-							   if (reload())
-								   dirty = true;
-							   break;
+			.update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool
+			{
+				bool moved_this_frame = false;
+				vec3 move_dir{};
+				if (win.key('w', 1073741906))
+					move_dir += vec3::constants::forward;
+				if (win.key('a', 1073741904))
+					move_dir += vec3::constants::left;
+				if (win.key('s', 1073741905))
+					move_dir += vec3::constants::backward;
+				if (win.key('d', 1073741903))
+					move_dir += vec3::constants::right;
+				if (!muu::approx_zero(move_dir))
+				{
+					auto move = vec3::normalize(move_dir) * delta_time;
+					if (!muu::approx_zero(move))
+					{
+						scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
+						moved_this_frame = true;
+						last_move_time	 = clock::now();
+					}
+				}
 
-						   case 97: move_dir.x += 1; break;
-						   case 100: move_dir.x += -1; break;
-						   case 119: move_dir.z += -1; break;
-						   case 115: move_dir.z += 1; break;
-					   }
-				   },
+				const auto prev_low_res = win.low_res;
+				win.low_res				= (clock::now() - last_move_time) < 0.5s;
+				backbuffer_dirty		= moved_this_frame || reloaded_this_frame || (win.low_res != prev_low_res);
+				reloaded_this_frame		= false;
+				return !should_quit;
+			},
 
-				   .key_up =
-					   [&](int key) noexcept
-				   {
-					   switch (key)
-					   {
-						   case 97: move_dir.x -= 1; break;
-						   case 100: move_dir.x -= -1; break;
-						   case 119: move_dir.z -= -1; break;
-						   case 115: move_dir.z -= 1; break;
-					   }
-				   },
-
-				   .update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool //
-				   {																		//
-					   if (!muu::approx_zero(move_dir))
-					   {
-						   auto move = vec3::normalize(move_dir) * delta_time;
-						   if (!muu::approx_zero(move))
-						   {
-							   scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
-							   dirty			 = true;
-							   low_res_mode_time = clock::now();
-							   win.low_res_mode	 = true;
-						   }
-					   }
-					   else if (to_seconds(clock::now() - low_res_mode_time) >= 1.0f && win.low_res_mode)
-					   {
-						   win.low_res_mode = false;
-						   dirty			= true;
-					   }
-
-					   backbuffer_dirty = dirty;
-					   dirty			= false;
-					   return !should_quit;
-				   },
-
-				   .render = [&](image_view pixels) noexcept //
-				   {										 //
-					   ray_tracer->render(scene, pixels, threads);
-				   } });
+			.render =
+				[&](image_view pixels) noexcept
+			{
+				auto& r = (win.low_res ? low_res_renderer : regular_renderer);
+				if (r)
+					r->render(scene, pixels, threads);
+			} //
+		});
 	}
 }
 
@@ -147,7 +193,7 @@ int main(int argc, char** argv)
 	}
 	catch (...)
 	{
-		error("An unspecified internal error occurred.");
+		error("An unspecified internal error occurred."sv);
 		return 1;
 	}
 

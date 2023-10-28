@@ -122,7 +122,7 @@ namespace soagen_struct_impl_rt_boxes
 
 	using soagen_table_traits_type = soagen::table_traits<
 					 /* 	value */ soagen::column_traits<rt::box>,
-					 /*  material */ soagen::column_traits<size_t>,
+					 /*  material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					 /*  center_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					 /*  center_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					 /*  center_z */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
@@ -151,7 +151,7 @@ namespace soagen_struct_impl_rt_planes
 
 	using soagen_table_traits_type = soagen::table_traits<
 					  /*	value */ soagen::column_traits<rt::plane>,
-					  /* material */ soagen::column_traits<size_t>,
+					  /* material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					  /* normal_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* normal_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* normal_z */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
@@ -167,7 +167,7 @@ namespace soagen_struct_impl_rt_spheres
 
 	using soagen_table_traits_type = soagen::table_traits<
 					  /*	value */ soagen::column_traits<rt::sphere>,
-					  /* material */ soagen::column_traits<size_t>,
+					  /* material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					  /* center_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* center_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* center_z */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
