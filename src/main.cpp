@@ -13,6 +13,8 @@ MUU_DISABLE_WARNINGS;
 #include <atomic>
 #include <span>
 #include <muu/thread_pool.h>
+#include <muu/strings.h>
+#include <argparse/argparse.hpp>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -59,7 +61,23 @@ namespace
 		}
 	};
 
-	static void run(std::span<const char*> args)
+	MUU_NODISCARD
+	static const renderers::description* find_renderer_by_name_fuzzy(std::string_view name) noexcept
+	{
+		if (name.empty())
+			return {};
+
+		if (auto desc = renderers::find_by_name(name))
+			return desc;
+
+		for (auto& r : renderers::all())
+			if (r.name.starts_with(name))
+				return &r;
+
+		return {};
+	}
+
+	static void run(const argparse::ArgumentParser& args)
 	{
 		log("working directory: "sv, fs::current_path().string());
 
@@ -69,13 +87,12 @@ namespace
 
 		const auto create_renderer = [](std::string_view name) -> renderer
 		{
-			auto desc = renderers::find_by_name(name);
+			auto desc = find_renderer_by_name_fuzzy(name);
 			if (!desc)
 			{
 				error("no known renderer with name '", name, "'");
 				return {};
 			}
-
 			assert(desc->name == name);
 			assert(desc->create);
 
@@ -86,15 +103,15 @@ namespace
 			return r;
 		};
 
-		renderer regular_renderer = create_renderer("mg_scalar_ray_tracer"sv);
+		renderer regular_renderer = create_renderer(muu::trim(args.get<std::string>("renderer")));
 		renderer low_res_renderer = create_renderer("simple_rasterizer"sv);
 
 		rt::scene scene;
-		const auto reload = [&]()
+		const auto reload_scene = [&]()
 		{
 			try
 			{
-				scene = scene::load(args.empty() ? "" : args[0]);
+				scene = scene::load(muu::trim(args.get<std::string>("scene")));
 				if (!scene.path.empty())
 					log("scene '"sv, scene.path, "' loaded."sv);
 				else
@@ -107,7 +124,7 @@ namespace
 				return false;
 			}
 		};
-		reload();
+		reload_scene();
 
 		auto win				= window{ "rt"s, { 800, 600 } };
 		const auto update_title = [&]()
@@ -131,7 +148,7 @@ namespace
 			{
 				log("key down: "sv, key);
 
-				if (key == ' ' && reload())
+				if (key == ' ' && reload_scene())
 				{
 					update_title();
 					reloaded_this_frame = true;
@@ -183,8 +200,26 @@ int main(int argc, char** argv)
 {
 	try
 	{
-		run(std::span<const char*>{ static_cast<const char**>(static_cast<void*>(argv + 1)),
-									static_cast<size_t>(argc - 1) });
+		argparse::ArgumentParser args{ "rt" };
+
+		args.add_description("Renders a scene with a software renderer of your choosing.");
+
+		args.add_argument("scene")
+			.help("scene TOML file") //
+			.nargs(1u)
+			.required()
+			.metavar("<path>");
+
+		args.add_argument("-r", "--renderer")
+			.help("renderer name") //
+			.nargs(1u)
+			.required()
+			.default_value("mg_scalar_ray_tracer"s)
+			.metavar("<name>");
+
+		args.parse_args(argc, argv);
+
+		run(args);
 	}
 	catch (const std::exception& ex)
 	{

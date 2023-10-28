@@ -454,7 +454,7 @@ scene scene::load(std::string_view path_sv)
 		bool ok = false;
 		if (path.is_relative())
 		{
-			for (auto root : { ""sv, "scenes/"sv, "../"sv, "../scenes/"sv, "../../"sv, "../../scenes/"sv })
+			for (auto root : { "scenes/"sv, "../scenes/"sv, "../../scenes/"sv, ""sv, "../"sv, "../../"sv })
 			{
 				auto p = path;
 				if (!root.empty())

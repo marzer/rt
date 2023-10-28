@@ -10,9 +10,6 @@ using namespace muu::literals;
 
 namespace
 {
-	static const auto sky_end	= colour{ 238, 245, 255 };
-	static const auto sky_start = colour{ 208, 228, 255 };
-
 	struct simple_rasterizer final : renderer_interface
 	{
 		void MUU_VECTORCALL render(const rt::scene& scene,
@@ -47,6 +44,9 @@ namespace
 				hit_tests(scene.planes);
 				hit_tests(scene.boxes);
 				hit_tests(scene.spheres);
+
+				static constexpr auto sky_end	= colour{ 238, 245, 255 };
+				static constexpr auto sky_start = colour{ 208, 228, 255 };
 
 				pixels(screen_pos) =
 					static_cast<uint32_t>(material != static_cast<unsigned>(-1)

@@ -1,5 +1,3 @@
-#include "../scene.hpp"
-#include "../image.hpp"
 #include "../renderer.hpp"
 
 using namespace rt;
