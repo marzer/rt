@@ -16,6 +16,7 @@ exe_file_names = [
 	'colour',
 	'renderer',
 	'random',
+	'brdfs',
 ]
 exe_cpp_files = []
 exe_extra_files = []

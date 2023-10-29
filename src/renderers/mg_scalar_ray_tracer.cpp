@@ -15,12 +15,6 @@ using namespace rt;
 
 namespace
 {
-	// MUU_PURE_GETTER
-	// static vec3 MUU_VECTORCALL lambert(const trace_result& r) noexcept
-	//{
-	//	return 0.5 * color(r.normal.x + 1, r.normal.y + 1, r.normal.z + 1);
-	// }
-
 	struct hit_result
 	{
 		float distance;
@@ -131,9 +125,7 @@ namespace
 
 	struct mg_scalar_ray_tracer final : renderer_interface
 	{
-		void MUU_VECTORCALL render(const rt::scene& scene,
-								   image_view& pixels,
-								   muu::thread_pool& threads) noexcept override
+		void render(const rt::scene& scene, image_view& pixels, muu::thread_pool& threads) noexcept override
 		{
 			const auto view = scene.camera.viewport(pixels.size());
 
@@ -155,7 +147,7 @@ namespace
 				colour.g = std::sqrt(colour.g);
 				colour.b = std::sqrt(colour.b);
 
-				pixels(screen_pos) = static_cast<uint32_t>(colour);
+				pixels(screen_pos) = colour;
 			};
 
 			threads.for_range(unsigned{}, pixels.size().x * pixels.size().y, worker);

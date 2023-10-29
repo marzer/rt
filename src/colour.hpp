@@ -74,7 +74,7 @@ namespace rt
 		{}
 
 		MUU_PURE_GETTER
-		explicit MUU_VECTORCALL operator uint32_t() const noexcept
+		/*implicit*/ MUU_VECTORCALL operator uint32_t() const noexcept
 		{
 			const auto src =
 				vec4u{ vec4::clamp(rgba, vec4::constants::zero, vec4::constants::one) * vec4{ 255.99999f } };
@@ -105,21 +105,21 @@ namespace rt
 		MUU_CONSTEVAL
 		colour operator"" _rgba(unsigned long long rgba) noexcept
 		{
-			return colour{ static_cast<uint32_t>(rgba) };
+			return colour{ static_cast<uint32_t>(rgba & 0xFFFFFFFFull) };
 		}
 
 		MUU_PURE_INLINE_GETTER
 		MUU_CONSTEVAL
 		colour operator"" _rgb(unsigned long long rgba) noexcept
 		{
-			return colour{ static_cast<uint32_t>((rgba << 8u) | 0x000000FFu) };
+			return colour{ static_cast<uint32_t>(((rgba & 0xFFFFFFFFull) << 8) | 0x000000FFull) };
 		}
 
 		MUU_PURE_INLINE_GETTER
 		MUU_CONSTEVAL
 		colour operator"" _argb(unsigned long long argb) noexcept
 		{
-			return colour{ static_cast<uint32_t>(((argb >> 24) & 0xFFu) | ((argb << 8) & 0xFFFFFF00u)) };
+			return colour{ static_cast<uint32_t>(((argb >> 24) & 0xFFull) | ((argb << 8) & 0xFFFFFF00ull)) };
 		}
 	}
 

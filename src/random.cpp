@@ -16,7 +16,7 @@ namespace
 
 namespace rt::detail
 {
-	float MUU_VECTORCALL random_float() noexcept
+	float random_float() noexcept
 	{
 		thread_local std::uniform_real_distribution<float> distribution(0.0f, 1.0f);
 		return distribution(random_engine());

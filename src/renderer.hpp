@@ -8,7 +8,7 @@ namespace rt
 {
 	struct MUU_ABSTRACT_INTERFACE renderer_interface
 	{
-		virtual void MUU_VECTORCALL render(const scene&, image_view&, muu::thread_pool&) noexcept = 0;
+		virtual void render(const scene&, image_view&, muu::thread_pool&) noexcept = 0;
 
 		virtual ~renderer_interface() noexcept = default;
 	};

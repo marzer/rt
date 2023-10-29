@@ -19,7 +19,7 @@ namespace rt
 	namespace detail
 	{
 		[[nodiscard]]
-		float MUU_VECTORCALL random_float() noexcept;
+		float random_float() noexcept;
 
 		template <typename>
 		struct randomizer;
@@ -28,7 +28,7 @@ namespace rt
 		struct randomizer<Float>
 		{
 			MUU_ALWAYS_INLINE
-			static Float MUU_VECTORCALL get() noexcept
+			static Float get() noexcept
 			{
 				return static_cast<Float>(random_float());
 			}
@@ -38,7 +38,7 @@ namespace rt
 		struct randomizer<muu::vector<Float, Dimensions>>
 		{
 			MUU_ALWAYS_INLINE
-			static muu::vector<Float, Dimensions> MUU_VECTORCALL get() noexcept
+			static muu::vector<Float, Dimensions> get() noexcept
 			{
 				if constexpr (Dimensions == 2)
 					return muu::vector<Float, Dimensions>{ random<Float>(), random<Float>() };
@@ -54,7 +54,7 @@ namespace rt
 	}
 
 	[[nodiscard]]
-	inline vec3 MUU_VECTORCALL random_unit_vector() noexcept
+	inline vec3 random_unit_vector() noexcept
 	{
 		while (true)
 		{
