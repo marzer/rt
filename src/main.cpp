@@ -104,27 +104,48 @@ namespace
 		};
 
 		renderer regular_renderer = create_renderer(muu::trim(args.get<std::string>("renderer")));
-		renderer low_res_renderer = create_renderer("simple_rasterizer"sv);
-
+		renderer low_res_renderer = create_renderer("ray_caster"sv);
 		rt::scene scene;
-		const auto reload_scene = [&]()
+		time_point last_scene_write_check{};
+		fs::file_time_type last_scene_write{};
+		const auto reload_scene = [&](bool preserve_camera = true)
 		{
+			const auto prev_camera = scene.camera;
+			const auto do_cam	   = muu::scope_guard{ [&]() noexcept
+												   {
+													  if (preserve_camera)
+														  scene.camera = prev_camera;
+												  } };
+
 			try
 			{
 				scene = scene::load(muu::trim(args.get<std::string>("scene")));
-				if (!scene.path.empty())
-					log("scene '"sv, scene.path, "' loaded."sv);
-				else
-					log("scene loaded."sv);
-				return true;
 			}
 			catch (const std::exception& ex)
 			{
 				error(ex.what());
+				last_scene_write = {};
 				return false;
 			}
+
+			last_scene_write_check = clock::now();
+			if (!scene.path.empty())
+			{
+				try
+				{
+					last_scene_write = fs::last_write_time(scene.path);
+				}
+				catch (...)
+				{
+					last_scene_write = {};
+				}
+				log("scene '"sv, scene.path, "' loaded."sv);
+			}
+			else
+				log("scene loaded."sv);
+
+			return true;
 		};
-		reload_scene();
 
 		auto win				= window{ "rt"s, { 800, 600 } };
 		const auto update_title = [&]()
@@ -137,10 +158,10 @@ namespace
 				ss << " - "sv << regular_renderer.description->name;
 			win.title(ss.str());
 		};
-		update_title();
 
 		muu::thread_pool threads;
-		bool reloaded_this_frame  = true;
+		bool reload_requested	  = true;
+		bool first_loaded		  = false;
 		time_point last_move_time = clock::now() - 1s;
 		win.loop({
 			.key_down =
@@ -148,15 +169,37 @@ namespace
 			{
 				log("key down: "sv, key);
 
-				if (key == ' ' && reload_scene())
-				{
-					update_title();
-					reloaded_this_frame = true;
-				}
+				if (key == ' ')
+					reload_requested = true;
 			},
 
 			.update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool
 			{
+				if (first_loaded										 //
+					&& !scene.path.empty()								 //
+					&& last_scene_write_check.time_since_epoch().count() //
+					&& last_scene_write.time_since_epoch().count()		 //
+					&& clock::now() - last_scene_write_check >= 0.5s)
+				{
+					last_scene_write_check = clock::now();
+					try
+					{
+						if (fs::last_write_time(scene.path) > last_scene_write)
+							reload_requested = true;
+					}
+					catch (...)
+					{}
+				}
+
+				bool reloaded_this_frame = false;
+				if (reload_requested)
+				{
+					reload_requested	= false;
+					reloaded_this_frame = reload_scene(first_loaded);
+					first_loaded		= first_loaded || reloaded_this_frame;
+					update_title();
+				}
+
 				bool moved_this_frame = false;
 				vec3 move_dir{};
 				if (win.key('w', 1073741906))
@@ -181,7 +224,6 @@ namespace
 				const auto prev_low_res = win.low_res;
 				win.low_res				= (clock::now() - last_move_time) < 0.5s;
 				backbuffer_dirty		= moved_this_frame || reloaded_this_frame || (win.low_res != prev_low_res);
-				reloaded_this_frame		= false;
 				return !should_quit;
 			},
 

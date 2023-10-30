@@ -89,4 +89,17 @@ namespace rt
 	{
 		return std::chrono::duration<float>{ ns }.count();
 	}
+
+	MUU_PURE_INLINE_GETTER
+	constexpr vec3 reflect(vec3 v, vec3 n) noexcept
+	{
+		return v - 2 * vec3::dot(v, n) * n;
+	}
+
+	enum class material_type : unsigned
+	{
+		lambert,
+		metal,
+		dielectric
+	};
 }

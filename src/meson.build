@@ -15,15 +15,14 @@ exe_file_names = [
 	'scene',
 	'colour',
 	'renderer',
-	'random',
-	'brdfs',
+	'random'
 ]
 exe_cpp_files = []
 exe_extra_files = []
 exe_extra_files += scene_files
 exe_extra_files += global_extra_files
 foreach name : exe_file_names
-	foreach suffix : ['.hpp','.cpp','.toml','.natvis']
+	foreach suffix : ['.hpp','.cpp','.toml','.natvis','.build']
 		if fs.is_file(name + suffix)
 			if suffix == '.cpp'
 				exe_cpp_files += files(name + suffix)
@@ -43,7 +42,8 @@ exe_dependencies += subproject('sdl2', default_options: subproject_overrides).ge
 exe_dependencies += subproject('sdl2', default_options: subproject_overrides).get_variable('sdl2main_dep')
 exe_dependencies += subproject('xsimd', default_options: subproject_overrides).get_variable('xsimd_dep')
 exe_dependencies += subproject('tomlplusplus', default_options: subproject_overrides).get_variable('tomlplusplus_dep')
-exe_dependencies += subproject('argparse').get_variable('argparse_dep')
+exe_dependencies += subproject('argparse', default_options: subproject_overrides).get_variable('argparse_dep')
+exe_dependencies += subproject('magic_enum', default_options: subproject_overrides).get_variable('magic_enum_dep')
 
 exe_includes = []
 exe_includes += vendor_includes

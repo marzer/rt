@@ -43,34 +43,32 @@ namespace rt
 			: rgba{ rgba }
 		{}
 
-	  private:
 		template <typename T>
 		MUU_PURE_INLINE_GETTER
-		static constexpr float MUU_VECTORCALL component_value(T val) noexcept
+		static constexpr float MUU_VECTORCALL to_component_value(T val) noexcept
 		{
 			if constexpr (muu::is_floating_point<T>)
 			{
-				return static_cast<float>(val);
+				return muu::clamp(static_cast<float>(val), 0.0f, 1.0f);
 			}
 			else
 			{
-				return muu::clamp(static_cast<float>(static_cast<muu::remove_enum<T>>(val)) / 255.99999f, 0.0f, 1.0f);
+				return to_component_value(static_cast<float>(static_cast<muu::remove_enum<T>>(val)));
 			}
 		}
 
-	  public:
 		template <typename R, typename G, typename B, typename A = float>
 		MUU_NODISCARD_CTOR
 		constexpr colour(R r, G g, B b, A a = 1.0f) noexcept //
-			: rgba{ component_value(r), component_value(g), component_value(b), component_value(a) }
+			: rgba{ to_component_value(r), to_component_value(g), to_component_value(b), to_component_value(a) }
 		{}
 
 		MUU_NODISCARD_CTOR
 		explicit constexpr colour(uint32_t rgba) noexcept
-			: rgba{ component_value((rgba >> 24) & 0xFF),
-					component_value((rgba >> 16) & 0xFF),
-					component_value((rgba >> 8) & 0xFF),
-					component_value(rgba & 0xFF) }
+			: rgba{ to_component_value((rgba >> 24) & 0xFF),
+					to_component_value((rgba >> 16) & 0xFF),
+					to_component_value((rgba >> 8) & 0xFF),
+					to_component_value(rgba & 0xFF) }
 		{}
 
 		MUU_PURE_GETTER

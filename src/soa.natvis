@@ -17,7 +17,7 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;rt::box*&gt;(table_.alloc_.columns[0])"
+			Expression="reinterpret_cast&lt;box*&gt;(table_.alloc_.columns[0])"
 		/>
 
 		<Intrinsic
@@ -208,7 +208,27 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;rt::colour*&gt;(table_.alloc_.columns[0])"
+			Expression="reinterpret_cast&lt;std::string*&gt;(table_.alloc_.columns[0])"
+		/>
+
+		<Intrinsic
+			Name="get_1"
+			Expression="reinterpret_cast&lt;material_type*&gt;(table_.alloc_.columns[1])"
+		/>
+
+		<Intrinsic
+			Name="get_2"
+			Expression="reinterpret_cast&lt;rt::colour*&gt;(table_.alloc_.columns[2])"
+		/>
+
+		<Intrinsic
+			Name="get_3"
+			Expression="reinterpret_cast&lt;float*&gt;(table_.alloc_.columns[3])"
+		/>
+
+		<Intrinsic
+			Name="get_4"
+			Expression="reinterpret_cast&lt;float*&gt;(table_.alloc_.columns[4])"
 		/>
 
 		<DisplayString>{{ size={size()} }}</DisplayString>
@@ -218,7 +238,7 @@
 			<Item Name="[capacity]">capacity()</Item>
 			<Item Name="[allocation_size]">size_bytes()</Item>
 
-			<Synthetic Name="colour">
+			<Synthetic Name="name">
 				<DisplayString Condition="size() &gt; 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)}, ... }}</DisplayString>
 				<DisplayString Condition="size() == 3u">{{ {*(get_0())}, {*(get_0() + 1)}, {*(get_0() + 2)} }}</DisplayString>
 				<DisplayString Condition="size() == 2u">{{ {*(get_0())}, {*(get_0() + 1)} }}</DisplayString>
@@ -232,18 +252,78 @@
 				</Expand>
 			</Synthetic>
 
+			<Synthetic Name="type">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_1())}, {*(get_1() + 1)}, {*(get_1() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_1())}, {*(get_1() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_1())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_1()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+
+			<Synthetic Name="albedo">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_2())}, {*(get_2() + 1)}, {*(get_2() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_2())}, {*(get_2() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_2())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_2()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+
+			<Synthetic Name="roughness">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_3())}, {*(get_3() + 1)}, {*(get_3() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_3())}, {*(get_3() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_3())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_3()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+
+			<Synthetic Name="reflectivity">
+				<DisplayString Condition="size() &gt; 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)}, ... }}</DisplayString>
+				<DisplayString Condition="size() == 3u">{{ {*(get_4())}, {*(get_4() + 1)}, {*(get_4() + 2)} }}</DisplayString>
+				<DisplayString Condition="size() == 2u">{{ {*(get_4())}, {*(get_4() + 1)} }}</DisplayString>
+				<DisplayString Condition="size() == 1u">{{ {*(get_4())} }}</DisplayString>
+				<DisplayString Condition="size() == 0u"></DisplayString>
+				<Expand>
+					<ArrayItems>
+						<Size>size()</Size>
+						<ValuePointer>get_4()</ValuePointer>
+					</ArrayItems>
+				</Expand>
+			</Synthetic>
+
 		</Expand>
 	</Type>
 
-	<Type Name="soagen::row&lt;rt::materials, 0&gt;">
-		<AlternativeType Name="soagen::row&lt;rt::materials&amp;, 0&gt;" />
-		<AlternativeType Name="soagen::row&lt;rt::materials&amp;&amp;, 0&gt;" />
-		<AlternativeType Name="soagen::row&lt;const rt::materials, 0&gt;" />
-		<AlternativeType Name="soagen::row&lt;const rt::materials&amp;, 0&gt;" />
-		<AlternativeType Name="soagen::row&lt;const rt::materials&amp;&amp;, 0&gt;" />
-		<DisplayString>{colour}</DisplayString>
+	<Type Name="soagen::row&lt;rt::materials, 0, 1, 2, 3, 4&gt;">
+		<AlternativeType Name="soagen::row&lt;rt::materials&amp;, 0, 1, 2, 3, 4&gt;" />
+		<AlternativeType Name="soagen::row&lt;rt::materials&amp;&amp;, 0, 1, 2, 3, 4&gt;" />
+		<AlternativeType Name="soagen::row&lt;const rt::materials, 0, 1, 2, 3, 4&gt;" />
+		<AlternativeType Name="soagen::row&lt;const rt::materials&amp;, 0, 1, 2, 3, 4&gt;" />
+		<AlternativeType Name="soagen::row&lt;const rt::materials&amp;&amp;, 0, 1, 2, 3, 4&gt;" />
+		<DisplayString>{{ {name}, {type}, {albedo}, {roughness}, {reflectivity} }}</DisplayString>
 		<Expand>
-			<Item Name="colour">colour</Item>
+			<Item Name="name">name</Item>
+			<Item Name="type">type</Item>
+			<Item Name="albedo">albedo</Item>
+			<Item Name="roughness">roughness</Item>
+			<Item Name="reflectivity">reflectivity</Item>
 		</Expand>
 	</Type>
 
@@ -259,7 +339,7 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;rt::plane*&gt;(table_.alloc_.columns[0])"
+			Expression="reinterpret_cast&lt;plane*&gt;(table_.alloc_.columns[0])"
 		/>
 
 		<Intrinsic
@@ -410,7 +490,7 @@
 
 		<Intrinsic
 			Name="get_0"
-			Expression="reinterpret_cast&lt;rt::sphere*&gt;(table_.alloc_.columns[0])"
+			Expression="reinterpret_cast&lt;sphere*&gt;(table_.alloc_.columns[0])"
 		/>
 
 		<Intrinsic

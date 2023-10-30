@@ -13,6 +13,7 @@
 #endif
 
 SOAGEN_DISABLE_WARNINGS;
+#include <string>
 SOAGEN_ENABLE_WARNINGS;
 
 SOAGEN_PUSH_WARNINGS;
@@ -43,6 +44,11 @@ namespace rt
 
 namespace soagen::detail
 {
+	#ifndef SOAGEN_NAME_albedo
+		#define SOAGEN_NAME_albedo
+		SOAGEN_MAKE_NAME(albedo);
+	#endif
+
 	#ifndef SOAGEN_NAME_center_x
 		#define SOAGEN_NAME_center_x
 		SOAGEN_MAKE_NAME(center_x);
@@ -56,11 +62,6 @@ namespace soagen::detail
 	#ifndef SOAGEN_NAME_center_z
 		#define SOAGEN_NAME_center_z
 		SOAGEN_MAKE_NAME(center_z);
-	#endif
-
-	#ifndef SOAGEN_NAME_colour
-		#define SOAGEN_NAME_colour
-		SOAGEN_MAKE_NAME(colour);
 	#endif
 
 	#ifndef SOAGEN_NAME_d
@@ -88,6 +89,11 @@ namespace soagen::detail
 		SOAGEN_MAKE_NAME(material);
 	#endif
 
+	#ifndef SOAGEN_NAME_name
+		#define SOAGEN_NAME_name
+		SOAGEN_MAKE_NAME(name);
+	#endif
+
 	#ifndef SOAGEN_NAME_normal_x
 		#define SOAGEN_NAME_normal_x
 		SOAGEN_MAKE_NAME(normal_x);
@@ -108,6 +114,21 @@ namespace soagen::detail
 		SOAGEN_MAKE_NAME(radius);
 	#endif
 
+	#ifndef SOAGEN_NAME_reflectivity
+		#define SOAGEN_NAME_reflectivity
+		SOAGEN_MAKE_NAME(reflectivity);
+	#endif
+
+	#ifndef SOAGEN_NAME_roughness
+		#define SOAGEN_NAME_roughness
+		SOAGEN_MAKE_NAME(roughness);
+	#endif
+
+	#ifndef SOAGEN_NAME_type
+		#define SOAGEN_NAME_type
+		SOAGEN_MAKE_NAME(type);
+	#endif
+
 	#ifndef SOAGEN_NAME_value
 		#define SOAGEN_NAME_value
 		SOAGEN_MAKE_NAME(value);
@@ -121,7 +142,7 @@ namespace soagen_struct_impl_rt_boxes
 	SOAGEN_ENABLE_WARNINGS;
 
 	using soagen_table_traits_type = soagen::table_traits<
-					 /* 	value */ soagen::column_traits<rt::box>,
+					 /* 	value */ soagen::column_traits<box>,
 					 /*  material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					 /*  center_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					 /*  center_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
@@ -139,7 +160,11 @@ namespace soagen_struct_impl_rt_materials
 	SOAGEN_ENABLE_WARNINGS;
 
 	using soagen_table_traits_type = soagen::table_traits<
-						/* colour */ soagen::column_traits<rt::colour>>;
+				  /*		 name */ soagen::column_traits<std::string>,
+				  /*		 type */ soagen::column_traits<material_type>,
+				  /*	   albedo */ soagen::column_traits<rt::colour>,
+				  /*	roughness */ soagen::column_traits<float>,
+				  /* reflectivity */ soagen::column_traits<float>>;
 
 	using soagen_allocator_type = soagen::allocator;
 }
@@ -150,7 +175,7 @@ namespace soagen_struct_impl_rt_planes
 	SOAGEN_ENABLE_WARNINGS;
 
 	using soagen_table_traits_type = soagen::table_traits<
-					  /*	value */ soagen::column_traits<rt::plane>,
+					  /*	value */ soagen::column_traits<plane>,
 					  /* material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					  /* normal_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* normal_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
@@ -166,7 +191,7 @@ namespace soagen_struct_impl_rt_spheres
 	SOAGEN_ENABLE_WARNINGS;
 
 	using soagen_table_traits_type = soagen::table_traits<
-					  /*	value */ soagen::column_traits<rt::sphere>,
+					  /*	value */ soagen::column_traits<sphere>,
 					  /* material */ soagen::column_traits<unsigned, soagen::max(std::size_t{ 32u }, alignof(unsigned))>,
 					  /* center_x */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
 					  /* center_y */ soagen::column_traits<float, soagen::max(std::size_t{ 32u }, alignof(float))>,
@@ -209,7 +234,11 @@ namespace soagen::detail
 		using type = table<table_traits_type<rt::boxes>, allocator_type<rt::boxes>>;
 	};
 
-	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 0, colour);
+	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 0, name);
+	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 1, type);
+	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 2, albedo);
+	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 3, roughness);
+	SOAGEN_MAKE_NAMED_COLUMN(rt::materials, 4, reflectivity);
 
 	template <>
 	struct is_soa_<rt::materials> : std::true_type
@@ -1049,7 +1078,11 @@ namespace rt
 
 		enum class columns : size_type
 		{
-			colour = 0,
+			name		 = 0,
+			type		 = 1,
+			albedo		 = 2,
+			roughness	 = 3,
+			reflectivity = 4,
 		};
 
 		template <auto Column>
@@ -1203,31 +1236,61 @@ namespace rt
 		// ------ push_back() --------------------------------------------------------------------------
 
 		SOAGEN_CPP20_CONSTEXPR
-		materials& push_back(column_traits<0>::param_type colour)	 //
-			noexcept(table_traits::push_back_is_nothrow<table_type>) //
+		materials& push_back(column_traits<0>::param_type name,
+							 column_traits<1>::param_type type,
+							 column_traits<2>::param_type albedo,
+							 column_traits<3>::param_type roughness,
+							 column_traits<4>::param_type reflectivity) //
+			noexcept(table_traits::push_back_is_nothrow<table_type>)	//
 		{
-			table_.emplace_back(static_cast<column_traits<0>::param_forward_type>(colour));
+			table_.emplace_back(static_cast<column_traits<0>::param_forward_type>(name),
+								static_cast<column_traits<1>::param_forward_type>(type),
+								static_cast<column_traits<2>::param_forward_type>(albedo),
+								static_cast<column_traits<3>::param_forward_type>(roughness),
+								static_cast<column_traits<4>::param_forward_type>(reflectivity));
 			return *this;
 		}
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = table_traits::rvalues_are_distinct)
 		SOAGEN_CPP20_CONSTEXPR
-		materials& push_back(column_traits<0>::rvalue_type colour)			//
+		materials& push_back(column_traits<0>::rvalue_type name,
+							 column_traits<1>::rvalue_type type,
+							 column_traits<2>::rvalue_type albedo,
+							 column_traits<3>::rvalue_type roughness,
+							 column_traits<4>::rvalue_type reflectivity)	//
 			noexcept(table_traits::rvalue_push_back_is_nothrow<table_type>) //
 		{
-			table_.emplace_back(static_cast<column_traits<0>::rvalue_forward_type>(colour));
+			table_.emplace_back(static_cast<column_traits<0>::rvalue_forward_type>(name),
+								static_cast<column_traits<1>::rvalue_forward_type>(type),
+								static_cast<column_traits<2>::rvalue_forward_type>(albedo),
+								static_cast<column_traits<3>::rvalue_forward_type>(roughness),
+								static_cast<column_traits<4>::rvalue_forward_type>(reflectivity));
 			return *this;
 		}
 
 		// ------ emplace_back() -----------------------------------------------------------------------
 
-		SOAGEN_CONSTRAINED_TEMPLATE((table_traits::row_constructible_from<Colour&&>), //
-									typename Colour)								  //
+		SOAGEN_CONSTRAINED_TEMPLATE(
+			(table_traits::row_constructible_from<Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>), //
+			typename Name,
+			typename Type,
+			typename Albedo,
+			typename Roughness,
+			typename Reflectivity) //
 		SOAGEN_CPP20_CONSTEXPR
-		materials& emplace_back(Colour&& colour)								  //
-			noexcept(table_traits::emplace_back_is_nothrow<table_type, Colour&&>) //
+		materials& emplace_back(Name&& name,
+								Type&& type,
+								Albedo&& albedo,
+								Roughness&& roughness,
+								Reflectivity&& reflectivity) //
+			noexcept(table_traits::
+						 emplace_back_is_nothrow<table_type, Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>) //
 		{
-			table_.emplace_back(static_cast<Colour&&>(colour));
+			table_.emplace_back(static_cast<Name&&>(name),
+								static_cast<Type&&>(type),
+								static_cast<Albedo&&>(albedo),
+								static_cast<Roughness&&>(roughness),
+								static_cast<Reflectivity&&>(reflectivity));
 			return *this;
 		}
 
@@ -1251,19 +1314,39 @@ namespace rt
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, materials&> insert(size_type index_, column_traits<0>::param_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)										   //
+		std::enable_if_t<sfinae, materials&> insert(size_type index_,
+													column_traits<0>::param_type name,
+													column_traits<1>::param_type type,
+													column_traits<2>::param_type albedo,
+													column_traits<3>::param_type roughness,
+													column_traits<4>::param_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)							   //
 		{
-			table_.emplace(index_, static_cast<column_traits<0>::param_forward_type>(colour));
+			table_.emplace(index_,
+						   static_cast<column_traits<0>::param_forward_type>(name),
+						   static_cast<column_traits<1>::param_forward_type>(type),
+						   static_cast<column_traits<2>::param_forward_type>(albedo),
+						   static_cast<column_traits<3>::param_forward_type>(roughness),
+						   static_cast<column_traits<4>::param_forward_type>(reflectivity));
 			return *this;
 		}
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_rvalues_) //
 		SOAGEN_CPP20_CONSTEXPR
-		materials& insert(std::enable_if_t<sfinae, size_type> index_, column_traits<0>::rvalue_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)											//
+		materials& insert(std::enable_if_t<sfinae, size_type> index_,
+						  column_traits<0>::rvalue_type name,
+						  column_traits<1>::rvalue_type type,
+						  column_traits<2>::rvalue_type albedo,
+						  column_traits<3>::rvalue_type roughness,
+						  column_traits<4>::rvalue_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)	  //
 		{
-			table_.emplace(index_, static_cast<column_traits<0>::rvalue_forward_type>(colour));
+			table_.emplace(index_,
+						   static_cast<column_traits<0>::rvalue_forward_type>(name),
+						   static_cast<column_traits<1>::rvalue_forward_type>(type),
+						   static_cast<column_traits<2>::rvalue_forward_type>(albedo),
+						   static_cast<column_traits<3>::rvalue_forward_type>(roughness),
+						   static_cast<column_traits<4>::rvalue_forward_type>(reflectivity));
 			return *this;
 		}
 
@@ -1271,50 +1354,107 @@ namespace rt
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, iterator> insert(iterator iter_, column_traits<0>::param_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)									   //
+		std::enable_if_t<sfinae, iterator> insert(iterator iter_,
+												  column_traits<0>::param_type name,
+												  column_traits<1>::param_type type,
+												  column_traits<2>::param_type albedo,
+												  column_traits<3>::param_type roughness,
+												  column_traits<4>::param_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)							 //
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<column_traits<0>::param_forward_type>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<column_traits<0>::param_forward_type>(name),
+						   static_cast<column_traits<1>::param_forward_type>(type),
+						   static_cast<column_traits<2>::param_forward_type>(albedo),
+						   static_cast<column_traits<3>::param_forward_type>(roughness),
+						   static_cast<column_traits<4>::param_forward_type>(reflectivity));
 			return iter_;
 		}
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, const_iterator> insert(const_iterator iter_, column_traits<0>::param_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)												   //
+		std::enable_if_t<sfinae, const_iterator> insert(const_iterator iter_,
+														column_traits<0>::param_type name,
+														column_traits<1>::param_type type,
+														column_traits<2>::param_type albedo,
+														column_traits<3>::param_type roughness,
+														column_traits<4>::param_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)								   //
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<column_traits<0>::param_forward_type>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<column_traits<0>::param_forward_type>(name),
+						   static_cast<column_traits<1>::param_forward_type>(type),
+						   static_cast<column_traits<2>::param_forward_type>(albedo),
+						   static_cast<column_traits<3>::param_forward_type>(roughness),
+						   static_cast<column_traits<4>::param_forward_type>(reflectivity));
 			return iter_;
 		}
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_rvalues_) //
 		SOAGEN_CPP20_CONSTEXPR
-		iterator insert(std::enable_if_t<sfinae, iterator> iter_, column_traits<0>::rvalue_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)										//
+		iterator insert(std::enable_if_t<sfinae, iterator> iter_,
+						column_traits<0>::rvalue_type name,
+						column_traits<1>::rvalue_type type,
+						column_traits<2>::rvalue_type albedo,
+						column_traits<3>::rvalue_type roughness,
+						column_traits<4>::rvalue_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)	//
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<column_traits<0>::rvalue_forward_type>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<column_traits<0>::rvalue_forward_type>(name),
+						   static_cast<column_traits<1>::rvalue_forward_type>(type),
+						   static_cast<column_traits<2>::rvalue_forward_type>(albedo),
+						   static_cast<column_traits<3>::rvalue_forward_type>(roughness),
+						   static_cast<column_traits<4>::rvalue_forward_type>(reflectivity));
 			return iter_;
 		}
 
 		SOAGEN_HIDDEN_CONSTRAINT(sfinae, bool sfinae = can_insert_rvalues_) //
 		SOAGEN_CPP20_CONSTEXPR
-		const_iterator insert(std::enable_if_t<sfinae, const_iterator> iter_, column_traits<0>::rvalue_type colour) //
-			noexcept(table_traits::insert_is_nothrow<table_type>)													//
+		const_iterator insert(std::enable_if_t<sfinae, const_iterator> iter_,
+							  column_traits<0>::rvalue_type name,
+							  column_traits<1>::rvalue_type type,
+							  column_traits<2>::rvalue_type albedo,
+							  column_traits<3>::rvalue_type roughness,
+							  column_traits<4>::rvalue_type reflectivity) //
+			noexcept(table_traits::insert_is_nothrow<table_type>)		  //
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<column_traits<0>::rvalue_forward_type>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<column_traits<0>::rvalue_forward_type>(name),
+						   static_cast<column_traits<1>::rvalue_forward_type>(type),
+						   static_cast<column_traits<2>::rvalue_forward_type>(albedo),
+						   static_cast<column_traits<3>::rvalue_forward_type>(roughness),
+						   static_cast<column_traits<4>::rvalue_forward_type>(reflectivity));
 			return iter_;
 		}
 
 		// ------ emplace(size_type) -------------------------------------------------------------------
 
-		SOAGEN_CONSTRAINED_TEMPLATE(sfinae,
-									typename Colour,
-									bool sfinae = table_traits::row_constructible_from<Colour&&> && can_insert_) //
+		SOAGEN_CONSTRAINED_TEMPLATE(
+			sfinae,
+			typename Name,
+			typename Type,
+			typename Albedo,
+			typename Roughness,
+			typename Reflectivity,
+			bool sfinae = table_traits::row_constructible_from<Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>
+					   && can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, materials&> emplace(size_type index_, Colour&& colour) //
-			noexcept(table_traits::emplace_is_nothrow<table_type, Colour&&>)			//
+		std::enable_if_t<sfinae, materials&> emplace(size_type index_,
+													 Name&& name,
+													 Type&& type,
+													 Albedo&& albedo,
+													 Roughness&& roughness,
+													 Reflectivity&& reflectivity) //
+			noexcept(
+				table_traits::emplace_is_nothrow<table_type, Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>) //
 		{
-			table_.emplace(index_, static_cast<Colour&&>(colour));
+			table_.emplace(index_,
+						   static_cast<Name&&>(name),
+						   static_cast<Type&&>(type),
+						   static_cast<Albedo&&>(albedo),
+						   static_cast<Roughness&&>(roughness),
+						   static_cast<Reflectivity&&>(reflectivity));
 			return *this;
 		}
 
@@ -1331,14 +1471,31 @@ namespace rt
 
 		// ------ emplace(iterator) --------------------------------------------------------------------
 
-		SOAGEN_CONSTRAINED_TEMPLATE(sfinae,
-									typename Colour,
-									bool sfinae = table_traits::row_constructible_from<Colour&&> && can_insert_) //
+		SOAGEN_CONSTRAINED_TEMPLATE(
+			sfinae,
+			typename Name,
+			typename Type,
+			typename Albedo,
+			typename Roughness,
+			typename Reflectivity,
+			bool sfinae = table_traits::row_constructible_from<Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>
+					   && can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, iterator> emplace(iterator iter_, Colour&& colour) //
-			noexcept(table_traits::emplace_is_nothrow<table_type, Colour&&>)		//
+		std::enable_if_t<sfinae, iterator> emplace(iterator iter_,
+												   Name&& name,
+												   Type&& type,
+												   Albedo&& albedo,
+												   Roughness&& roughness,
+												   Reflectivity&& reflectivity) //
+			noexcept(
+				table_traits::emplace_is_nothrow<table_type, Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>) //
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<Colour&&>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<Name&&>(name),
+						   static_cast<Type&&>(type),
+						   static_cast<Albedo&&>(albedo),
+						   static_cast<Roughness&&>(roughness),
+						   static_cast<Reflectivity&&>(reflectivity));
 			return iter_;
 		}
 
@@ -1353,14 +1510,31 @@ namespace rt
 			return iter_;
 		}
 
-		SOAGEN_CONSTRAINED_TEMPLATE(sfinae,
-									typename Colour,
-									bool sfinae = table_traits::row_constructible_from<Colour&&> && can_insert_) //
+		SOAGEN_CONSTRAINED_TEMPLATE(
+			sfinae,
+			typename Name,
+			typename Type,
+			typename Albedo,
+			typename Roughness,
+			typename Reflectivity,
+			bool sfinae = table_traits::row_constructible_from<Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>
+					   && can_insert_) //
 		SOAGEN_CPP20_CONSTEXPR
-		std::enable_if_t<sfinae, const_iterator> emplace(const_iterator iter_, Colour&& colour) //
-			noexcept(table_traits::emplace_is_nothrow<table_type, Colour&&>)					//
+		std::enable_if_t<sfinae, const_iterator> emplace(const_iterator iter_,
+														 Name&& name,
+														 Type&& type,
+														 Albedo&& albedo,
+														 Roughness&& roughness,
+														 Reflectivity&& reflectivity) //
+			noexcept(
+				table_traits::emplace_is_nothrow<table_type, Name&&, Type&&, Albedo&&, Roughness&&, Reflectivity&&>) //
 		{
-			table_.emplace(static_cast<size_type>(iter_), static_cast<Colour&&>(colour));
+			table_.emplace(static_cast<size_type>(iter_),
+						   static_cast<Name&&>(name),
+						   static_cast<Type&&>(type),
+						   static_cast<Albedo&&>(albedo),
+						   static_cast<Roughness&&>(roughness),
+						   static_cast<Reflectivity&&>(reflectivity));
 			return iter_;
 		}
 

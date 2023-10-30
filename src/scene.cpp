@@ -7,8 +7,10 @@ MUU_DISABLE_WARNINGS;
 #include <concepts>
 #include <filesystem>
 #include <optional>
+#include <array>
 #include <muu/type_name.h>
 #include <muu/hashing.h>
+#include <magic_enum.hpp>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -38,6 +40,9 @@ namespace
 
 		template <typename T>
 		concept arithmetic_or_bool = std::integral<T> || std::floating_point<T>;
+
+		template <typename T>
+		concept enumerator = std::is_enum_v<T>;
 	}
 
 	template <typename... T>
@@ -93,6 +98,15 @@ namespace
 				error(node, "Infinities and NaNs are not allowed."sv);
 		}
 		val = *opt;
+		return val;
+	}
+
+	static auto& deserialize(const toml::node& node, std::string& val)
+	{
+		auto str = node.as_string();
+		if (!str)
+			mismatch_error(node, val);
+		val = *std::move(*str);
 		return val;
 	}
 
@@ -363,7 +377,31 @@ namespace
 		return val;
 	}
 
-	template <typename T>
+	template <concepts::enumerator T>
+	static auto& deserialize(const toml::node& node, T& val)
+	{
+		if (const auto intval = node.as_integer())
+		{
+			const auto v = magic_enum::enum_cast<T>(static_cast<muu::remove_enum<muu::remove_cvref<T>>>(**intval));
+			if (!v)
+				error(node, "integer value "sv, **intval, " was not a member of enum "sv, muu::type_name<T>);
+			val = *v;
+			return val;
+		}
+
+		if (const auto strval = node.as_string())
+		{
+			const auto v = magic_enum::enum_cast<T>(**strval);
+			if (!v)
+				error(node, "string value '"sv, **strval, "' was not a member of enum "sv, muu::type_name<T>);
+			val = *v;
+			return val;
+		}
+
+		mismatch_error(node, val);
+	}
+
+	MUU_CONSTRAINED_TEMPLATE(!std::is_invocable_v<std::remove_cvref_t<T>>, typename T)
 	static T& deserialize_if(const toml::node* node, T& val)
 	{
 		if (node)
@@ -371,7 +409,7 @@ namespace
 		return val;
 	}
 
-	template <typename T>
+	MUU_CONSTRAINED_TEMPLATE(!std::is_invocable_v<std::remove_cvref_t<T>>, typename T)
 	static T deserialize_if(const toml::node* node, T&& val)
 	{
 		return deserialize_if(node, val);
@@ -417,19 +455,19 @@ namespace
 	}
 
 	template <typename T>
-	static T& deserialize(const toml::node& parent, std::string_view key, T& val)
+	static decltype(auto) deserialize(const toml::node& parent, std::string_view key, T& val)
 	{
 		return deserialize_if(get(parent, key), val);
 	}
 
 	template <typename T>
-	static T deserialize(const toml::node& parent, std::string_view key, T&& val)
+	static decltype(auto) deserialize(const toml::node& parent, std::string_view key, T&& val)
 	{
 		return deserialize_if(get(parent, key), val);
 	}
 
 	template <typename T>
-	static T deserialize(const toml::node& parent, std::string_view key, const T& val)
+	static decltype(auto) deserialize(const toml::node& parent, std::string_view key, const T& val)
 	{
 		return deserialize_if(get(parent, key), T{ val });
 	}
@@ -493,11 +531,17 @@ scene scene::load(std::string_view path_sv)
 	{
 		for (auto& tbl : *materials)
 		{
-			s.materials.push_back(deserialize(tbl, "colour", colour{}));
+			const auto type = deserialize(tbl, "type", material_type::lambert);
+
+			s.materials.push_back(deserialize(tbl, "name", ""s),
+								  type,
+								  deserialize(tbl, "albedo", colours::fuchsia),
+								  deserialize(tbl, "roughness", 0.05f),
+								  deserialize(tbl, "reflectivity", type == material_type::metal ? 0.8f : 0.5f));
 		}
 	}
 	if (s.materials.empty())
-		s.materials.push_back(0xFF0080_rgb);
+		s.materials.push_back(""s, material_type::lambert, colours::fuchsia, 0.05f, 0.5f);
 
 	const auto get_material = [&](const toml::node& parent) -> unsigned
 	{

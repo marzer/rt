@@ -1,7 +1,6 @@
 #include "../scene.hpp"
 #include "../image.hpp"
 #include "../renderer.hpp"
-#include "../brdfs.hpp"
 MUU_DISABLE_WARNINGS;
 #include <muu/thread_pool.h>
 MUU_ENABLE_WARNINGS;
@@ -11,7 +10,16 @@ using namespace muu::literals;
 
 namespace
 {
-	struct simple_rasterizer final : renderer_interface
+	MUU_PURE_GETTER
+	static constexpr colour MUU_VECTORCALL lambert(vec3 surface_normal,
+												   vec3 direction_to_light_source,
+												   colour surface_color,
+												   float intensity = 1.0f) noexcept
+	{
+		return colour{ direction_to_light_source.dot(surface_normal) * surface_color.rgb * intensity };
+	}
+
+	struct ray_caster final : renderer_interface
 	{
 		void render(const rt::scene& scene, image_view& pixels, muu::thread_pool& threads) noexcept override
 		{
@@ -62,7 +70,7 @@ namespace
 					pixels(screen_pos) = colour{ vec3::min(vec3{ 0.25f }
 															   + lambert(hit_normal,
 																		 vec3::direction(hit_pos, near_pos),
-																		 scene.materials.colour()[hit_material])
+																		 scene.materials.albedo()[hit_material])
 																		 .rgb
 																	 * vec3{ 0.75f },
 														   vec3::constants::one) };
@@ -79,5 +87,5 @@ namespace
 		}
 	};
 
-	REGISTER_RENDERER(simple_rasterizer);
+	REGISTER_RENDERER(ray_caster);
 }

@@ -5,12 +5,16 @@ includes.internal = [ 'common.hpp', 'colour.hpp' ]
 
 [structs.materials]
 variables = [
-	{ name = 'colour',   type = 'rt::colour' },
+    { name = 'name',         type = 'std::string' },
+    { name = 'type',         type = 'material_type' },
+    { name = 'albedo',       type = '{% namespace::scope %}colour' },
+    { name = 'roughness',    type = 'float' },
+    { name = 'reflectivity', type = 'float' },
 ]
 
 [structs.planes]
 variables = [
-	{ name = 'value',    type = 'rt::plane' },
+	{ name = 'value',    type = 'plane' },
 	{ name = 'material', type = 'unsigned',  alignment = 32 },
 	{ name = 'normal_x', type = 'float',     alignment = 32 },
 	{ name = 'normal_y', type = 'float',     alignment = 32 },
@@ -20,7 +24,7 @@ variables = [
 
 [structs.spheres]
 variables = [
-	{ name = 'value',    type = 'rt::sphere' },
+	{ name = 'value',    type = 'sphere' },
 	{ name = 'material', type = 'unsigned',  alignment = 32 },
 	{ name = 'center_x', type = 'float',     alignment = 32 },
 	{ name = 'center_y', type = 'float',     alignment = 32 },
@@ -30,7 +34,7 @@ variables = [
 
 [structs.boxes]
 variables = [
-	{ name = 'value',    type = 'rt::box' },
+	{ name = 'value',    type = 'box' },
 	{ name = 'material', type = 'unsigned', alignment = 32 },
 	{ name = 'center_x', type = 'float',    alignment = 32 },
 	{ name = 'center_y', type = 'float',    alignment = 32 },

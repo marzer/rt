@@ -5,8 +5,12 @@
 
 
 exe_cpp_files += files(
-	'simple_rasterizer.cpp',
+	'ray_caster.cpp',
 	'mg_scalar_ray_tracer.cpp',
 	'null_renderer.cpp',
 	'mg_simd_ray_tracer.cpp',
+)
+
+exe_extra_files += files(
+	'meson.build'
 )
