@@ -15,6 +15,7 @@ MUU_DISABLE_WARNINGS;
 #include <muu/thread_pool.h>
 #include <muu/strings.h>
 #include <argparse/argparse.hpp>
+#include <imgui.h>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -190,6 +191,11 @@ namespace
 					catch (...)
 					{}
 				}
+
+				ImGui::Begin("foo");
+				if (ImGui::Button("reload?"))
+					reload_requested = true;
+				ImGui::End();
 
 				bool reloaded_this_frame = false;
 				if (reload_requested)

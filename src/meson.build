@@ -44,6 +44,7 @@ exe_dependencies += subproject('xsimd', default_options: subproject_overrides).g
 exe_dependencies += subproject('tomlplusplus', default_options: subproject_overrides).get_variable('tomlplusplus_dep')
 exe_dependencies += subproject('argparse', default_options: subproject_overrides).get_variable('argparse_dep')
 exe_dependencies += subproject('magic_enum', default_options: subproject_overrides).get_variable('magic_enum_dep')
+exe_dependencies += subproject('imgui', default_options: subproject_overrides).get_variable('imgui_dep')
 
 exe_includes = []
 exe_includes += vendor_includes

@@ -20,7 +20,6 @@ namespace rt
 	class window
 	{
 	  private:
-		vec2u size_								 = {};
 		std::array<void*, 2> handles_			 = {};
 		std::array<back_buffer, 2> back_buffers_ = {};
 
@@ -46,6 +45,9 @@ namespace rt
 		explicit operator bool() const noexcept;
 
 		void loop(const window_events& ev);
+
+		MUU_PURE_GETTER
+		vec2u size() const noexcept;
 
 		MUU_PURE_GETTER
 		std::string_view title() const noexcept;

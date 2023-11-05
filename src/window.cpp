@@ -6,6 +6,9 @@ MUU_DISABLE_WARNINGS;
 #include <string>
 #include <atomic>
 #include <mutex>
+#include <imgui.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdlrenderer2.h>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -56,7 +59,6 @@ namespace
 }
 
 window::window(std::string_view title, vec2u size) //
-	: size_{ size }
 {
 	sdl_initialize();
 
@@ -65,9 +67,11 @@ window::window(std::string_view title, vec2u size) //
 								   SDL_WINDOWPOS_CENTERED,
 								   static_cast<int>(size.x),
 								   static_cast<int>(size.y),
-								   SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI);
+								   SDL_WINDOW_ALLOW_HIGHDPI);
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
+
+	assert(window::size() == size);
 
 	handles_[1] = SDL_CreateRenderer(window_handle, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 	if (!handles_[1])
@@ -75,18 +79,22 @@ window::window(std::string_view title, vec2u size) //
 
 	back_buffers_[0] = back_buffer{ size, renderer_handle };
 	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer_handle };
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGui::StyleColorsDark();
+	ImGui_ImplSDL2_InitForSDLRenderer(window_handle, renderer_handle);
+	ImGui_ImplSDLRenderer2_Init(renderer_handle);
 }
 
 window::window(window&& other) noexcept //
-	: size_{ std::exchange(other.size_, {}) },
-	  handles_{ std::exchange(other.handles_, {}) },
+	: handles_{ std::exchange(other.handles_, {}) },
 	  back_buffers_{ std::move(other.back_buffers_) },
 	  low_res{ std::exchange(low_res, {}) }
 {}
 
 window& window::operator=(window&& rhs) noexcept
 {
-	size_		  = std::exchange(rhs.size_, {});
 	handles_	  = std::exchange(rhs.handles_, {});
 	back_buffers_ = std::move(rhs.back_buffers_);
 	low_res		  = std::exchange(rhs.low_res, {});
@@ -95,6 +103,10 @@ window& window::operator=(window&& rhs) noexcept
 
 window::~window() noexcept
 {
+	ImGui_ImplSDLRenderer2_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
+
 	back_buffers_ = {};
 
 	if (renderer_handle)
@@ -107,11 +119,9 @@ window::~window() noexcept
 MUU_PURE
 window::operator bool() const noexcept
 {
-	return window_handle								 //
-		&& renderer_handle								 //
-		&& back_buffers_[static_cast<unsigned>(low_res)] //
-		&& size_.x > 0									 //
-		&& size_.y > 0;
+	return window_handle   //
+		&& renderer_handle //
+		&& back_buffers_[static_cast<unsigned>(low_res)];
 }
 
 void window::loop(const window_events& ev)
@@ -123,6 +133,8 @@ void window::loop(const window_events& ev)
 		SDL_Event e;
 		while (SDL_PollEvent(&e))
 		{
+			ImGui_ImplSDL2_ProcessEvent(&e);
+
 			switch (e.type)
 			{
 				case SDL_APP_TERMINATING: [[fallthrough]];
@@ -148,6 +160,10 @@ void window::loop(const window_events& ev)
 			}
 		}
 
+		ImGui_ImplSDLRenderer2_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+
 		auto time = clock::now();
 		auto dt	  = to_seconds(time - prev_time);
 		prev_time = time;
@@ -167,13 +183,21 @@ void window::loop(const window_events& ev)
 			current_back_buffer.flush();
 		}
 
+		ImGui::Render();
+		SDL_RenderClear(renderer_handle);
 		if (current_back_buffer)
-		{
-			SDL_RenderClear(renderer_handle);
 			SDL_RenderCopy(renderer_handle, static_cast<SDL_Texture*>(current_back_buffer.handle()), nullptr, nullptr);
-			SDL_RenderPresent(renderer_handle);
-		}
+		ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData());
+		SDL_RenderPresent(renderer_handle);
 	}
+}
+
+MUU_PURE
+vec2u window::size() const noexcept
+{
+	int w, h;
+	SDL_GetWindowSize(window_handle, &w, &h);
+	return { static_cast<unsigned>(w), static_cast<unsigned>(h) };
 }
 
 MUU_PURE
