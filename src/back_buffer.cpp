@@ -2,6 +2,7 @@
 MUU_DISABLE_WARNINGS;
 #include <SDL.h>
 #include <stdexcept>
+#include <cstring> // memcpy
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;

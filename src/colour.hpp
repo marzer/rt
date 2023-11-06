@@ -4,6 +4,9 @@
 MUU_PUSH_WARNINGS;
 #ifdef _MSC_VER
 	#pragma warning(disable : 4201)
+#elif MUU_CLANG
+	#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
+	#pragma clang diagnostic ignored "-Wnested-anon-types"
 #endif
 
 namespace rt

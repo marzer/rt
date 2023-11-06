@@ -32,8 +32,10 @@ namespace rt
 }
 
 #define REGISTER_RENDERER(T)                                                                                           \
+	MUU_DISABLE_WARNINGS;                                                                                              \
 	static const int MUU_CONCAT(register_val_impl_, __LINE__) =                                                        \
 		(::rt::renderers::install({ .key	= __FILE__ ":" MUU_MAKE_STRING(__LINE__) ":" MUU_MAKE_STRING(T),           \
 									.name	= MUU_MAKE_STRING(T),                                                      \
 									.create = []() -> renderer_interface* { return new T; } }),                        \
-		 0)
+		 0);                                                                                                           \
+		 MUU_ENABLE_WARNINGS

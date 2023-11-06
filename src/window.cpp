@@ -230,7 +230,7 @@ bool window::get_key(int key_code) noexcept
 	assert(key_code != SDLK_UNKNOWN);
 
 	const auto scan_code = SDL_GetScancodeFromKey(static_cast<SDL_Keycode>(key_code));
-	if (scan_code < 0 || scan_code == SDL_SCANCODE_UNKNOWN || scan_code >= SDL_NUM_SCANCODES)
+	if (scan_code <= SDL_SCANCODE_UNKNOWN || scan_code >= SDL_NUM_SCANCODES)
 		return false;
 
 	int num_keys{};

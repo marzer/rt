@@ -167,6 +167,7 @@ namespace
 	}
 
 	template <typename T, size_t R, size_t C>
+	[[maybe_unused]]
 	static auto& deserialize(const toml::node& node, muu::matrix<T, R, C>& val)
 	{
 		auto arr = node.as_array();
@@ -356,6 +357,7 @@ namespace
 	}
 
 	template <concepts::array T>
+	[[maybe_unused]]
 	static auto& deserialize(const toml::node& node, T& val)
 	{
 		auto arr = node.as_array();
@@ -370,6 +372,7 @@ namespace
 	}
 
 	template <concepts::optional T>
+	[[maybe_unused]]
 	static auto& deserialize(const toml::node& node, T& val)
 	{
 		val.emplace();
@@ -455,6 +458,7 @@ namespace
 	}
 
 	template <typename T>
+	[[maybe_unused]]
 	static decltype(auto) deserialize(const toml::node& parent, std::string_view key, T& val)
 	{
 		return deserialize_if(get(parent, key), val);

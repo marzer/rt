@@ -40,8 +40,8 @@ namespace rt
 		MUU_PURE_GETTER
 		constexpr vec3 screen_to_world(const vec2& screen_pos, float depth = 0.0f) const noexcept
 		{
-			const vec3 pos_in_view_space = { 2.0f * (screen_pos.x / size.x) - 1.0f,
-											 -2.0f * (screen_pos.y / size.y) + 1.0f,
+			const vec3 pos_in_view_space = { 2.0f * (screen_pos.x /  static_cast<float>(size.x)) - 1.0f,
+											 -2.0f * (screen_pos.y / static_cast<float>(size.y)) + 1.0f,
 											 depth };
 			return inverse_view_projection.transform_position(pos_in_view_space);
 		}

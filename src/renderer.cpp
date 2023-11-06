@@ -10,7 +10,10 @@ namespace
 {
 	static std::vector<description>& all_renderers() noexcept
 	{
+		MUU_DISABLE_WARNINGS;
 		static std::vector<description> r;
+		MUU_ENABLE_WARNINGS;
+
 		return r;
 	}
 }
