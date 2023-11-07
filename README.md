@@ -14,6 +14,14 @@ Renderer/ray tracer test framework.
 -   The [meson] build system
 -   A recent version of Python 3 (required by [meson]).
 
+#### Linux
+
+You may need to install a bunch of packages for x11 and sdl2, e.g.:
+
+```sh
+sudo apt install xorg-dev libx11-dev libgl1-mesa-glx libsdl2-dev
+```
+
 ### Creating a build directory
 
 ```sh
