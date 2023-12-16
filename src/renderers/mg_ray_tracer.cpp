@@ -173,7 +173,7 @@ namespace
 		return {};
 	}
 
-	struct mg_scalar_ray_tracer final : renderer_interface
+	struct mg_ray_tracer final : renderer_interface
 	{
 		void render(const rt::scene& scene, image_view& pixels, muu::thread_pool& threads) noexcept override
 		{
@@ -205,5 +205,5 @@ namespace
 		}
 	};
 
-	REGISTER_RENDERER(mg_scalar_ray_tracer);
+	REGISTER_RENDERER(mg_ray_tracer);
 }

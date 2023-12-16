@@ -475,6 +475,9 @@ namespace
 	{
 		return deserialize_if(get(parent, key), T{ val });
 	}
+
+	static constexpr auto path_search_prefixes =
+		std::array{ "scenes/"sv, "../scenes/"sv, "../../scenes/"sv, ""sv, "../"sv, "../../"sv };
 }
 
 scene scene::load(std::string_view path_sv)
@@ -496,7 +499,7 @@ scene scene::load(std::string_view path_sv)
 		bool ok = false;
 		if (path.is_relative())
 		{
-			for (auto root : { "scenes/"sv, "../scenes/"sv, "../../scenes/"sv, ""sv, "../"sv, "../../"sv })
+			for (const auto& root : path_search_prefixes)
 			{
 				auto p = path;
 				if (!root.empty())
@@ -597,4 +600,29 @@ scene scene::load(std::string_view path_sv)
 	}
 
 	return s;
+}
+
+scene scene::load_first_available()
+{
+	for (const auto& dir_sv : path_search_prefixes)
+	{
+		fs::path dir{ dir_sv };
+		auto status = fs::status(dir);
+		if (status.type() != fs::file_type::directory)
+			continue;
+
+		for (auto const& file : fs::directory_iterator{ dir })
+		{
+			if (!file.path().has_stem() || !file.path().has_extension() || file.path().extension() != ".toml"sv)
+				continue;
+
+			status = fs::status(file);
+			if (status.type() != fs::file_type::regular)
+				continue;
+
+			return load(file.path().string());
+		}
+	}
+
+	throw std::runtime_error{ "no scene files found" };
 }

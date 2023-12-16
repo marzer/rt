@@ -105,7 +105,7 @@ namespace
 		};
 
 		renderer regular_renderer = create_renderer(muu::trim(args.get<std::string>("renderer")));
-		renderer low_res_renderer = create_renderer("ray_caster"sv);
+		renderer low_res_renderer = create_renderer("rasterizer"sv);
 		rt::scene scene;
 		time_point last_scene_write_check{};
 		fs::file_time_type last_scene_write{};
@@ -120,7 +120,11 @@ namespace
 
 			try
 			{
-				scene = scene::load(muu::trim(args.get<std::string>("scene")));
+				const auto path = muu::trim(args.get<std::string>("scene"));
+				if (path.empty())
+					scene = scene::load_first_available();
+				else
+					scene = scene::load(path);
 			}
 			catch (const std::exception& ex)
 			{
@@ -252,17 +256,18 @@ int main(int argc, char** argv)
 
 		args.add_description("Renders a scene with a software renderer of your choosing.");
 
-		args.add_argument("scene")
+		args.add_argument("-s", "--scene")
 			.help("scene TOML file") //
 			.nargs(1u)
 			.required()
+			.default_value(""s)
 			.metavar("<path>");
 
 		args.add_argument("-r", "--renderer")
 			.help("renderer name") //
 			.nargs(1u)
 			.required()
-			.default_value("mg_scalar_ray_tracer"s)
+			.default_value("mg_ray_tracer"s)
 			.metavar("<name>");
 
 		args.parse_args(argc, argv);

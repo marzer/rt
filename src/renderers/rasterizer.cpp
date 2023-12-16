@@ -19,7 +19,7 @@ namespace
 		return colour{ direction_to_light_source.dot(surface_normal) * surface_color.rgb * intensity };
 	}
 
-	struct ray_caster final : renderer_interface
+	struct rasterizer final : renderer_interface
 	{
 		void render(const rt::scene& scene, image_view& pixels, muu::thread_pool& threads) noexcept override
 		{
@@ -87,5 +87,5 @@ namespace
 		}
 	};
 
-	REGISTER_RENDERER(ray_caster);
+	REGISTER_RENDERER(rasterizer);
 }

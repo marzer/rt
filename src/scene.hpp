@@ -19,5 +19,8 @@ namespace rt
 
 		MUU_NODISCARD
 		static scene load(std::string_view file);
+
+		MUU_NODISCARD
+		static scene load_first_available();
 	};
 }

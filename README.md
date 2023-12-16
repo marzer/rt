@@ -26,16 +26,16 @@ sudo apt install xorg-dev libx11-dev libgl1-mesa-glx libsdl2-dev
 
 ```sh
 # windows with visual studio:
-meson setup builddir --backend vs
+meson setup build --backend vs
 
 # everything else:
-meson setup builddir
+meson setup build
 ```
 
 ### Building
 
 ```sh
-cd builddir && meson compile
+cd build && meson compile
 ```
 
 ### Running
@@ -53,7 +53,7 @@ Positional arguments:
 Optional arguments:
   -h, --help            shows help message and exits
   -v, --version         prints version information and exits
-  -r, --renderer <name> renderer name [default: "mg_scalar_ray_tracer"]
+  -r, --renderer <name> renderer name [default: "mg_ray_tracer"]
 ```
 
 Available renderers are listed as part of the program's stdout during regular execution.
@@ -75,7 +75,7 @@ meson subprojects download && meson subprojects update --reset
 The default build config is Release (highly-optimized but poor debugging experience). If you wish to change to debug:
 
 ```sh
-cd builddir && meson configure --buildtype debug
+cd build && meson configure --buildtype debug
 ```
 
 ### Adding a new renderer
