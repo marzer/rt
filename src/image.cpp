@@ -7,7 +7,7 @@ using namespace rt;
 
 image::image(vec2u sz) noexcept //
 	: data_{ static_cast<pixel_type*>(
-		sz.x * sz.y ? muu::aligned_alloc(sz.x * sz.y * sizeof(pixel_type), buffer_alignment) : nullptr) },
+		(sz.x * sz.y > 0u) ? muu::aligned_alloc(sz.x * sz.y * sizeof(pixel_type), buffer_alignment) : nullptr) },
 	  size_{ sz }
 {}
 

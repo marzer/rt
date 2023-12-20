@@ -43,17 +43,16 @@ cd build && meson compile
 `rt` is a command-line application.
 
 ```
-Usage: rt [-h] --renderer <name> <path>
+Usage: rt [--help] [--version] [--list] --scene <path> --renderer <name>
 
 Renders a scene with a software renderer of your choosing.
 
-Positional arguments:
-  <path>                scene TOML file [required]
-
 Optional arguments:
-  -h, --help            shows help message and exits
-  -v, --version         prints version information and exits
-  -r, --renderer <name> renderer name [default: "mg_ray_tracer"]
+  -h, --help      shows help message and exits
+  -v, --version   prints version information and exits
+  -l, --list      lists available renderers and exits
+  -s, --scene     scene TOML file [nargs=0..1] [default: ""]
+  -r, --renderer  renderer name [nargs=0..1] [default: "mg_ray_tracer"]
 ```
 
 Available renderers are listed as part of the program's stdout during regular execution.

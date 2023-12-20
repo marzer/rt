@@ -80,6 +80,13 @@ namespace
 
 	static void run(const argparse::ArgumentParser& args)
 	{
+		if (args.get<bool>("list"))
+		{
+			for (auto& r : renderers::all())
+				log(r.name);
+			return;
+		}
+
 		log("working directory: "sv, fs::current_path().string());
 
 		log("available renderers: "sv);
@@ -256,6 +263,10 @@ int main(int argc, char** argv)
 
 		args.add_description("Renders a scene with a software renderer of your choosing.");
 
+		args.add_argument("-l", "--list")
+			.help("lists available renderers and exits") //
+			.flag();
+
 		args.add_argument("-s", "--scene")
 			.help("scene TOML file") //
 			.nargs(1u)
@@ -267,7 +278,7 @@ int main(int argc, char** argv)
 			.help("renderer name") //
 			.nargs(1u)
 			.required()
-			.default_value("mg_ray_tracer"s)
+			.default_value(std::string{ find_renderer_by_name_fuzzy("mg")->name })
 			.metavar("<name>");
 
 		args.parse_args(argc, argv);

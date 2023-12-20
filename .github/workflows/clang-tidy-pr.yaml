@@ -1,0 +1,45 @@
+name: clang-tidy-pr
+
+on:
+    pull_request:
+        paths:
+            - "**.hpp"
+            - "**.cpp"
+
+jobs:
+    linux:
+        runs-on: ubuntu-latest
+
+        defaults:
+            run:
+                shell: bash
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Install dependencies
+              run: |
+                  sudo -H pip3 install --no-cache-dir --upgrade ninja meson
+
+            - name: Configure
+              run: |
+                  meson setup build
+
+            - name: Generate review
+              uses: ZedThree/clang-tidy-review@v0.14.0
+              id: review
+              with:
+                  build_dir: build
+                  config_file: .clang-tidy
+                  include: "*.[ch]pp"
+                  lgtm_comment_body: ""
+
+            - name: Upload review
+              uses: ZedThree/clang-tidy-review/upload@v0.14.0
+              id: upload-review
+
+            - if: steps.review.outputs.total_comments > 0
+              run: exit 1

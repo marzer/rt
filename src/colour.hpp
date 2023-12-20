@@ -4,6 +4,9 @@
 MUU_PUSH_WARNINGS;
 #ifdef _MSC_VER
 	#pragma warning(disable : 4201)
+#elif MUU_GCC
+	#pragma GCC diagnostic ignored "-Wpedantic"
+	#pragma GCC diagnostic ignored "-Wshadow"
 #elif MUU_CLANG
 	#pragma clang diagnostic ignored "-Wgnu-anonymous-struct"
 	#pragma clang diagnostic ignored "-Wnested-anon-types"
@@ -13,14 +16,33 @@ namespace rt
 {
 	struct MUU_TRIVIAL_ABI colour
 	{
+		struct rgba_t
+		{
+			float r;
+			float g;
+			float b;
+			float a;
+		};
+		static_assert(sizeof(rgba_t) == sizeof(float) * 4);
+
+		struct rgb_t
+		{
+			float r;
+			float g;
+			float b;
+		};
+		static_assert(sizeof(rgb_t) == sizeof(float) * 3);
+
 		union
 		{
-			vec4 rgba;
+			rgba_t rgba;
+
 			struct
 			{
 				union
 				{
-					vec3 rgb;
+					rgb_t rgb;
+
 					struct
 					{
 						float r;
@@ -30,6 +52,7 @@ namespace rt
 				};
 				float a;
 			};
+
 			float values[4];
 		};
 
@@ -38,12 +61,12 @@ namespace rt
 
 		MUU_NODISCARD_CTOR
 		explicit constexpr colour(const vec3 rgb, float a = 1.0f) noexcept //
-			: rgba{ rgb, a }
+			: rgba{ muu::bit_cast<rgba_t>(vec4{ rgb, a }) }
 		{}
 
 		MUU_NODISCARD_CTOR
 		explicit constexpr colour(const vec4 rgba) noexcept //
-			: rgba{ rgba }
+			: rgba{ muu::bit_cast<rgba_t>(rgba) }
 		{}
 
 		template <typename T>
@@ -77,9 +100,21 @@ namespace rt
 		MUU_PURE_GETTER
 		/*implicit*/ MUU_VECTORCALL operator uint32_t() const noexcept
 		{
-			const auto src =
-				vec4u{ vec4::clamp(rgba, vec4::constants::zero, vec4::constants::one) * vec4{ 255.99999f } };
+			const auto src = vec4u{ vec4::clamp(muu::bit_cast<vec4>(rgba), vec4::constants::zero, vec4::constants::one)
+									* vec4{ 255.99999f } };
 			return (src.x << 24u) | (src.y << 16u) | (src.z << 8u) | src.w;
+		}
+
+		MUU_PURE_GETTER
+		explicit constexpr MUU_VECTORCALL operator vec3() const noexcept
+		{
+			return muu::bit_cast<vec3>(rgb);
+		}
+
+		MUU_PURE_GETTER
+		explicit constexpr MUU_VECTORCALL operator vec4() const noexcept
+		{
+			return muu::bit_cast<vec4>(rgba);
 		}
 
 	  private:
@@ -87,7 +122,7 @@ namespace rt
 		MUU_PURE
 		friend constexpr colour& MUU_VECTORCALL operator+=(colour& lhs, colour rhs) noexcept
 		{
-			lhs.rgba += rhs.rgba;
+			lhs.rgba = muu::bit_cast<rgba_t>(muu::bit_cast<vec4>(lhs.rgba) + muu::bit_cast<vec4>(rhs.rgba));
 			return lhs;
 		}
 
@@ -95,6 +130,22 @@ namespace rt
 		friend constexpr colour MUU_VECTORCALL operator+(colour lhs, colour rhs) noexcept
 		{
 			return lhs += rhs;
+		}
+
+		template <std::floating_point T>
+		MUU_ALWAYS_INLINE
+		MUU_PURE
+		friend constexpr colour& MUU_VECTORCALL operator*=(colour& lhs, T rhs) noexcept
+		{
+			lhs.rgba = muu::bit_cast<rgba_t>(muu::bit_cast<vec4>(lhs.rgba) * rhs);
+			return lhs;
+		}
+
+		template <std::floating_point T>
+		MUU_PURE_INLINE_GETTER
+		friend constexpr colour MUU_VECTORCALL operator*(colour lhs, T rhs) noexcept
+		{
+			return lhs *= rhs;
 		}
 	};
 	static_assert(std::is_trivially_copyable_v<colour>);
@@ -281,6 +332,18 @@ namespace rt
 		inline constexpr colour portal_blue	  = 0x0078FF_rgb;
 		inline constexpr colour portal_orange = 0xFD6600_rgb;
 	}
+}
+
+namespace muu
+{
+	template <>
+	inline constexpr bool allow_implicit_bit_cast<rt::colour, rt::vec4> = true;
+
+	template <>
+	inline constexpr bool allow_implicit_bit_cast<rt::colour::rgba_t, rt::vec4> = true;
+
+	template <>
+	inline constexpr bool allow_implicit_bit_cast<rt::colour::rgb_t, rt::vec3> = true;
 }
 
 MUU_POP_WARNINGS;

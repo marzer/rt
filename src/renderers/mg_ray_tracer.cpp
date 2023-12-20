@@ -112,7 +112,7 @@ namespace
 															 const hit_result& hit,
 															 vec3& attenuation) noexcept
 	{
-		attenuation = scene.materials.albedo()[hit.material].rgb * scene.materials.reflectivity()[hit.material];
+		attenuation = vec3{ scene.materials.albedo()[hit.material] * scene.materials.reflectivity()[hit.material] };
 
 		auto scatter = hit.normal + random_unit_vector();
 		if (scatter.approx_zero())
@@ -128,7 +128,7 @@ namespace
 														   const hit_result& hit,
 														   vec3& attenuation) noexcept
 	{
-		attenuation = scene.materials.albedo()[hit.material].rgb * scene.materials.reflectivity()[hit.material];
+		attenuation = vec3{ scene.materials.albedo()[hit.material] * scene.materials.reflectivity()[hit.material] };
 
 		vec3 scatter = reflect(vec3::normalize(r.direction), hit.normal)
 					 + scene.materials.roughness()[hit.material] * random_unit_vector();

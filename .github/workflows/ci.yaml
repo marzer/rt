@@ -1,0 +1,100 @@
+name: ci
+
+on:
+    push:
+        paths:
+            - "**.hpp"
+            - "**.cpp"
+            - "**/meson.build"
+            - "**/workflows/ci.yaml"
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    linux:
+        strategy:
+            matrix:
+                os:
+                    - "ubuntu-22.04"
+                compiler:
+                    #  cc: "gcc"
+                    #- cxx: "g++"
+                    - cxx: "clang++"
+                      cc: "clang"
+                linker:
+                    - "lld"
+                type:
+                    - "debug"
+                    - "release"
+
+        runs-on: "${{ matrix.os }}"
+
+        defaults:
+            run:
+                shell: bash
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Install dependencies
+              run: |
+                  sudo -H pip3 install --no-cache-dir --upgrade ninja meson
+
+            - name: Install lld
+              if: ${{ startsWith(matrix.linker, 'lld')  }}
+              run: |
+                  sudo apt -y install --no-install-recommends lld
+
+            # temporary workaround for this: https://github.com/actions/runner-images/issues/8659
+            - name: Workaround for Clang on Ubuntu
+              if: ${{ startsWith(matrix.compiler.cxx, 'clang') && matrix.os == 'ubuntu-22.04' }}
+              run: |
+                  sudo rm -f /etc/apt/sources.list.d/ubuntu-toolchain-r-ubuntu-test-jammy.list
+                  sudo apt-get update
+                  sudo apt-get install -y --allow-downgrades libc6=2.35-0ubuntu3.5 libc6-dev=2.35-0ubuntu3.5 libstdc++6=12.3.0-1ubuntu1~22.04 libgcc-s1=12.3.0-1ubuntu1~22.04
+
+            - name: Configure
+              run: |
+                  CC=${{ matrix.compiler.cc }} CXX=${{ matrix.compiler.cxx }} CXX_LD=${{ matrix.linker }} meson setup build --buildtype=${{ matrix.type }}
+
+            - name: Build
+              run: meson compile -C build --jobs -1
+
+    windows:
+        strategy:
+            matrix:
+                type:
+                    - "debug"
+                    - "release"
+
+        runs-on: windows-latest
+
+        defaults:
+            run:
+                shell: cmd
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - uses: ilammy/msvc-dev-cmd@v1
+
+            - name: Install dependencies
+              run: |
+                  pip install --no-cache-dir --upgrade ninja meson
+
+            - name: Configure
+              run: |
+                  meson setup build --vsenv --buildtype=${{ matrix.type }}
+
+            - name: Build
+              run: |
+                  meson compile -C build --jobs -1
