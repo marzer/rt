@@ -80,6 +80,7 @@ namespace
 
 	static void run(const argparse::ArgumentParser& args)
 	{
+		static size_t current_renderer_index = 0; // 
 		log("working directory: "sv, fs::current_path().string());
 
 		log("available renderers: "sv);
@@ -212,6 +213,22 @@ namespace
 
 				bool moved_this_frame = false;
 				vec3 move_dir{};
+				if (win.key('+', 61)) //
+				{
+					current_renderer_index = (current_renderer_index + 1) % renderers::all().size();
+					const auto& all_renderers = renderers::all();// which one uncovers them?
+					regular_renderer = create_renderer(all_renderers[current_renderer_index].name);
+					reload_requested = true;
+				}
+
+				if (win.key('-', 45)) //
+				{
+					current_renderer_index = (current_renderer_index - 1) % renderers::all().size();
+					const auto& all_renderers = renderers::all();// which one uncovers them?
+					regular_renderer = create_renderer(all_renderers[current_renderer_index].name);
+					reload_requested = true;
+				}
+
 				if (win.key('w', 1073741906))
 					move_dir += vec3::constants::forward;
 				if (win.key('a', 1073741904))
@@ -220,6 +237,8 @@ namespace
 					move_dir += vec3::constants::backward;
 				if (win.key('d', 1073741903))
 					move_dir += vec3::constants::right;
+				if (win.key(27))
+					exit(EXIT_SUCCESS); //potentially needs a better closing point
 				if (!muu::approx_zero(move_dir))
 				{
 					auto move = vec3::normalize(move_dir) * delta_time;
