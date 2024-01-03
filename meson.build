@@ -134,6 +134,7 @@ global_args += cpp.get_supported_arguments(
 	'-Wno-documentation-unknown-command',
 	'-Wno-switch-enum',
 	'-Wno-covered-switch-default',
+	'-Wno-switch-default',
 	'-Wno-padded',
 	'-Wno-float-equal'
 )
@@ -201,7 +202,7 @@ global_dependencies = []
 
 global_overrides = [ ]
 
-subproject_overrides = [ 'werror=false', 'warning_level=1', 'default_library=static', 'buildtype=release' ]
+subproject_overrides = [ 'werror=false', 'warning_level=0', 'default_library=static', 'buildtype=release' ]
 
 #-----------------------------------------------------------------------------------------------------------------------
 # subdirectories + files

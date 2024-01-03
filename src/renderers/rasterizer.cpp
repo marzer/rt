@@ -16,7 +16,7 @@ namespace
 												   colour surface_color,
 												   float intensity = 1.0f) noexcept
 	{
-		return colour{ direction_to_light_source.dot(surface_normal) * surface_color.rgb * intensity };
+		return colour{ direction_to_light_source.dot(surface_normal) * vec3{ surface_color } * intensity };
 	}
 
 	struct rasterizer final : renderer_interface

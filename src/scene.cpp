@@ -348,7 +348,7 @@ namespace
 		if (!arr || arr->size() > 4)
 			mismatch_error(node, val);
 
-		val.rgba = {};
+		val = {};
 		for (size_t i = 0; i < arr->size(); i++)
 			deserialize((*arr)[i], val.values[i]);
 		if (arr->size() < 4)
@@ -503,7 +503,10 @@ scene scene::load(std::string_view path_sv)
 			{
 				auto p = path;
 				if (!root.empty())
+				{
 					p = fs::path{ root } / p;
+					p.make_preferred();
+				}
 
 				if (fs::is_regular_file(p))
 				{
