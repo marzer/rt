@@ -213,18 +213,18 @@ namespace
 
 				bool moved_this_frame = false;
 				vec3 move_dir{};
-				if (win.key('+', 61)) //
+				if (win.key('+', 61))
 				{
 					current_renderer_index = (current_renderer_index + 1) % renderers::all().size();
-					const auto& all_renderers = renderers::all();// which one uncovers them?
+					const auto& all_renderers = renderers::all();
 					regular_renderer = create_renderer(all_renderers[current_renderer_index].name);
 					reload_requested = true;
 				}
 
-				if (win.key('-', 45)) //
+				if (win.key('-', 45))
 				{
 					current_renderer_index = (current_renderer_index - 1) % renderers::all().size();
-					const auto& all_renderers = renderers::all();// which one uncovers them?
+					const auto& all_renderers = renderers::all();
 					regular_renderer = create_renderer(all_renderers[current_renderer_index].name);
 					reload_requested = true;
 				}
@@ -238,7 +238,7 @@ namespace
 				if (win.key('d', 1073741903))
 					move_dir += vec3::constants::right;
 				if (win.key(27))
-					exit(EXIT_SUCCESS); //potentially needs a better closing point
+					exit(EXIT_SUCCESS);
 				if (!muu::approx_zero(move_dir))
 				{
 					auto move = vec3::normalize(move_dir) * delta_time;
