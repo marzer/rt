@@ -38,7 +38,9 @@
 			"map": "cpp",
 			"set": "cpp",
 			"xtree": "cpp",
-			"optional": "cpp"
+			"optional": "cpp",
+			"array": "cpp",
+			"ios": "cpp"
 		},
 		"C_Cpp.default.compileCommands": "builddir\\compile_commands.json",
 		"todo-tree.general.tags": [
@@ -54,6 +56,7 @@
 			"[ ]",
 			"[x]",
 			"bug:"
-		]
+		],
+		"mesonbuild.configureOnOpen": false
 	}
 }

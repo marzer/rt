@@ -80,19 +80,8 @@ namespace
 
 	static void run(const argparse::ArgumentParser& args)
 	{
-		if (args.get<bool>("list"))
-		{
-			for (auto& r : renderers::all())
-				log(r.name);
-			return;
-		}
-		log("working directory: "sv, fs::current_path().string());
-
-		log("available renderers: "sv);
-		for (auto& r : renderers::all())
-			log("    ", r.name);
-
-		const auto create_renderer = [](std::string_view name) -> renderer
+		bool renderer_changed	   = false;
+		const auto create_renderer = [&](std::string_view name) -> renderer
 		{
 			auto desc = find_renderer_by_name_fuzzy(name);
 			if (!desc)
@@ -107,6 +96,7 @@ namespace
 			r.description = desc;
 			r.object.reset(desc->create());
 			log("created renderer: ", name);
+			renderer_changed = true;
 			return r;
 		};
 
@@ -173,98 +163,98 @@ namespace
 		muu::thread_pool threads;
 		bool reload_requested = true;
 		bool first_loaded	  = false;
-		bool renderer_changed = false;
-
 		time_point last_move_time = clock::now() - 1s;
-		win.loop({ .key_down =
-					   [&](int key) noexcept
-				   {
-					   if (win.key('+', 61) || win.key('-', 45))
-					   {
-						   const auto all_renderers = renderers::all();
-						   auto current_renderer_index =
-							   static_cast<size_t>(regular_renderer.description - renderers::all().data());
-						   size_t size			  = all_renderers.size();
-						   size_t increment		  = (win.key('+', 61)) ? 1 : static_cast<size_t>(-1);
-						   current_renderer_index = (current_renderer_index + increment + size) % size;
-						   regular_renderer		  = create_renderer(all_renderers[current_renderer_index].name);
-						   renderer_changed		  = true;
-					   }
+		win.loop({
+			.key_down =
+				[&](int key) noexcept
+			{
+				if (win.key('+', '-', 61, 45))
+				{
+					const auto all_renderers = renderers::all();
+					auto renderer_index = static_cast<size_t>(regular_renderer.description - renderers::all().data());
+					renderer_index =
+						static_cast<size_t>((static_cast<int>(renderer_index) + (win.key('+', 61) ? 1 : -1)))
+						% all_renderers.size();
+					log("renderer index", renderer_index);
+					regular_renderer = create_renderer(all_renderers[renderer_index].name);
+				}
 
-					   log("key down: "sv, key);
+				log("key down: "sv, key);
 
-					   if (key == ' ')
-						   reload_requested = true;
-				   },
+				if (key == ' ')
+					reload_requested = true;
+			},
 
-				   .update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool
-				   {
-					   if (first_loaded											//
-						   && !scene.path.empty()								//
-						   && last_scene_write_check.time_since_epoch().count() //
-						   && last_scene_write.time_since_epoch().count()		//
-						   && clock::now() - last_scene_write_check >= 0.5s)
-					   {
-						   last_scene_write_check = clock::now();
-						   try
-						   {
-							   if (fs::last_write_time(scene.path) > last_scene_write)
-								   reload_requested = true;
-						   }
-						   catch (...)
-						   {}
-					   }
+			.update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool
+			{
+				if (first_loaded										 //
+					&& !scene.path.empty()								 //
+					&& last_scene_write_check.time_since_epoch().count() //
+					&& last_scene_write.time_since_epoch().count()		 //
+					&& clock::now() - last_scene_write_check >= 0.5s)
+				{
+					last_scene_write_check = clock::now();
+					try
+					{
+						if (fs::last_write_time(scene.path) > last_scene_write)
+							reload_requested = true;
+					}
+					catch (...)
+					{}
+				}
 
-					   ImGui::Begin("foo");
-					   if (ImGui::Button("reload?"))
-						   reload_requested = true;
-					   ImGui::End();
+				ImGui::Begin("foo");
+				if (ImGui::Button("reload?"))
+					reload_requested = true;
+				ImGui::End();
 
-					   bool reloaded_this_frame = false;
-					   if (reload_requested)
-					   {
-						   reload_requested	   = false;
-						   reloaded_this_frame = reload_scene(first_loaded);
-						   first_loaded		   = first_loaded || reloaded_this_frame;
-						   update_title();
-					   }
+				bool reloaded_this_frame = false;
+				if (reload_requested)
+				{
+					reload_requested	= false;
+					reloaded_this_frame = reload_scene(first_loaded);
+					first_loaded		= first_loaded || reloaded_this_frame;
+					update_title();
+				}
 
-					   bool moved_this_frame = false;
-					   vec3 move_dir{};
+				bool moved_this_frame = false;
+				vec3 move_dir{};
 
-					   if (win.key('w', 1073741906))
-						   move_dir += vec3::constants::forward;
-					   if (win.key('a', 1073741904))
-						   move_dir += vec3::constants::left;
-					   if (win.key('s', 1073741905))
-						   move_dir += vec3::constants::backward;
-					   if (win.key('d', 1073741903))
-						   move_dir += vec3::constants::right;
-					   if (!muu::approx_zero(move_dir))
-					   {
-						   auto move = vec3::normalize(move_dir) * delta_time;
-						   if (!muu::approx_zero(move))
-						   {
-							   scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
-							   moved_this_frame = true;
-							   last_move_time	= clock::now();
-						   }
-					   }
+				if (win.key('w', 1073741906))
+					move_dir += vec3::constants::forward;
+				if (win.key('a', 1073741904))
+					move_dir += vec3::constants::left;
+				if (win.key('s', 1073741905))
+					move_dir += vec3::constants::backward;
+				if (win.key('d', 1073741903))
+					move_dir += vec3::constants::right;
+				if (!muu::approx_zero(move_dir))
+				{
+					auto move = vec3::normalize(move_dir) * delta_time;
+					if (!muu::approx_zero(move))
+					{
+						scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
+						moved_this_frame = true;
+						last_move_time	 = clock::now();
+					}
+				}
 
-					   const auto prev_low_res = win.low_res;
-					   win.low_res			   = (clock::now() - last_move_time) < 0.5s;
-					   backbuffer_dirty =
-						   moved_this_frame || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
-					   return !should_quit;
-				   },
+				const auto prev_low_res = win.low_res;
+				win.low_res				= (clock::now() - last_move_time) < 0.5s;
+				backbuffer_dirty =
+					moved_this_frame || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
+				renderer_changed = false;
+				return !should_quit;
+			},
 
-				   .render =
-					   [&](image_view pixels) noexcept
-				   {
-					   auto& r = (win.low_res ? low_res_renderer : regular_renderer);
-					   if (r)
-						   r->render(scene, pixels, threads);
-				   } });
+			.render =
+				[&](image_view pixels) noexcept
+			{
+				pixels.clear(colours::black);
+				if (auto& r = (win.low_res ? low_res_renderer : regular_renderer))
+					r->render(scene, pixels, threads);
+			} //
+		});
 	}
 }
 
@@ -295,6 +285,19 @@ int main(int argc, char** argv)
 			.metavar("<name>");
 
 		args.parse_args(argc, argv);
+
+		if (args.get<bool>("list"))
+		{
+			for (auto& r : renderers::all())
+				log(r.name);
+			return 0;
+		}
+
+		log("working directory: "sv, fs::current_path().string());
+
+		log("available renderers: "sv);
+		for (auto& r : renderers::all())
+			log("    ", r.name);
 
 		run(args);
 	}

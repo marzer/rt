@@ -1,6 +1,7 @@
 #include "image.hpp"
 MUU_DISABLE_WARNINGS;
 #include <muu/aligned_alloc.h>
+#include <algorithm>
 MUU_ENABLE_WARNINGS;
 
 using namespace rt;
@@ -27,4 +28,16 @@ image::~image() noexcept
 {
 	if (data_)
 		muu::aligned_free(data_);
+}
+
+image& image::clear(uint32_t colour) noexcept
+{
+	std::fill(data_, data_ + (size_.x * size_.y), colour);
+	return *this;
+}
+
+image_view& image_view::clear(uint32_t colour) noexcept
+{
+	std::fill(data_, data_ + (size_.x * size_.y), colour);
+	return *this;
 }

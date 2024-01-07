@@ -83,6 +83,8 @@ namespace rt
 		{
 			return { (idx % size_.x), (idx / size_.x) };
 		}
+
+		image& clear(uint32_t colour) noexcept;
 	};
 
 	static_assert(!std::is_copy_constructible_v<image>);
@@ -155,6 +157,8 @@ namespace rt
 		{
 			return { (idx % size_.x), (idx / size_.x) };
 		}
+
+		image_view& clear(uint32_t colour) noexcept;
 	};
 
 	static_assert(std::is_trivially_copy_constructible_v<image_view>);
