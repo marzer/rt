@@ -8,6 +8,7 @@ exe_cpp_files += files(
 	'rasterizer.cpp',
 	'mg_ray_tracer.cpp',
 	'null_renderer.cpp',
+	'sm_ray_tracer.cpp'
 )
 
 exe_extra_files += files(

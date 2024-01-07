@@ -80,7 +80,8 @@ namespace
 
 	static void run(const argparse::ArgumentParser& args)
 	{
-		const auto create_renderer = [](std::string_view name) -> renderer
+		bool renderer_changed	   = false;
+		const auto create_renderer = [&](std::string_view name) -> renderer
 		{
 			auto desc = find_renderer_by_name_fuzzy(name);
 			if (!desc)
@@ -95,6 +96,7 @@ namespace
 			r.description = desc;
 			r.object.reset(desc->create());
 			log("created renderer: ", name);
+			renderer_changed = true;
 			return r;
 		};
 
@@ -167,7 +169,18 @@ namespace
 				[&](int key) noexcept
 			{
 				log("key down: "sv, key);
-
+				if (win.key('+', '-', 61, 45))
+				{
+					const auto all_renderers = renderers::all();
+					auto renderer_index = static_cast<size_t>(regular_renderer.description - renderers::all().data());
+					renderer_index =
+						static_cast<size_t>((static_cast<int>(renderer_index) + (win.key('+', 61) ? 1 : -1)))
+						% all_renderers.size();
+					log("renderer index", renderer_index);
+					regular_renderer = create_renderer(all_renderers[renderer_index].name);
+				}
+				if (win.key(27)) // esc key
+					should_quit = true;
 				if (key == ' ')
 					reload_requested = true;
 			},
@@ -206,6 +219,7 @@ namespace
 
 				bool moved_this_frame = false;
 				vec3 move_dir{};
+
 				if (win.key('w', 1073741906))
 					move_dir += vec3::constants::forward;
 				if (win.key('a', 1073741904))
@@ -227,7 +241,9 @@ namespace
 
 				const auto prev_low_res = win.low_res;
 				win.low_res				= (clock::now() - last_move_time) < 0.5s;
-				backbuffer_dirty		= moved_this_frame || reloaded_this_frame || (win.low_res != prev_low_res);
+				backbuffer_dirty =
+					moved_this_frame || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
+				renderer_changed = false;
 				return !should_quit;
 			},
 
