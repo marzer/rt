@@ -161,13 +161,14 @@ namespace
 		};
 
 		muu::thread_pool threads;
-		bool reload_requested = true;
-		bool first_loaded	  = false;
+		bool reload_requested	  = true;
+		bool first_loaded		  = false;
 		time_point last_move_time = clock::now() - 1s;
 		win.loop({
 			.key_down =
 				[&](int key) noexcept
 			{
+				log("key down: "sv, key);
 				if (win.key('+', '-', 61, 45))
 				{
 					const auto all_renderers = renderers::all();
@@ -178,9 +179,8 @@ namespace
 					log("renderer index", renderer_index);
 					regular_renderer = create_renderer(all_renderers[renderer_index].name);
 				}
-
-				log("key down: "sv, key);
-
+				if (win.key(27)) // esc key
+					should_quit = true;
 				if (key == ' ')
 					reload_requested = true;
 			},
