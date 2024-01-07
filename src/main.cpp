@@ -80,19 +80,6 @@ namespace
 
 	static void run(const argparse::ArgumentParser& args)
 	{
-		if (args.get<bool>("list"))
-		{
-			for (auto& r : renderers::all())
-				log(r.name);
-			return;
-		}
-
-		log("working directory: "sv, fs::current_path().string());
-
-		log("available renderers: "sv);
-		for (auto& r : renderers::all())
-			log("    ", r.name);
-
 		const auto create_renderer = [](std::string_view name) -> renderer
 		{
 			auto desc = find_renderer_by_name_fuzzy(name);
@@ -247,8 +234,8 @@ namespace
 			.render =
 				[&](image_view pixels) noexcept
 			{
-				auto& r = (win.low_res ? low_res_renderer : regular_renderer);
-				if (r)
+				pixels.clear(colours::black);
+				if (auto& r = (win.low_res ? low_res_renderer : regular_renderer))
 					r->render(scene, pixels, threads);
 			} //
 		});
@@ -282,6 +269,19 @@ int main(int argc, char** argv)
 			.metavar("<name>");
 
 		args.parse_args(argc, argv);
+
+		if (args.get<bool>("list"))
+		{
+			for (auto& r : renderers::all())
+				log(r.name);
+			return 0;
+		}
+
+		log("working directory: "sv, fs::current_path().string());
+
+		log("available renderers: "sv);
+		for (auto& r : renderers::all())
+			log("    ", r.name);
 
 		run(args);
 	}
