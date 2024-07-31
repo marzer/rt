@@ -13,6 +13,8 @@ namespace rt
 		std::function<void(int /* virtual key code */)> key_down;
 		std::function<void(int /* virtual key code */)> key_held;
 		std::function<void(int /* virtual key code */)> key_up;
+		// std::function<void(int /* virtual key code */)> event;
+
 		std::function<bool(float /* delta_time */, bool& /* backbuffer_dirty */)> update;
 		std::function<void(image_view)> render;
 	};

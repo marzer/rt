@@ -5,6 +5,8 @@ MUU_DISABLE_WARNINGS;
 #include <SDL.h>
 #include <string>
 #include <atomic>
+#include <iostream>
+
 #include <mutex>
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
@@ -61,13 +63,14 @@ namespace
 window::window(std::string_view title, vec2u size) //
 {
 	sdl_initialize();
+	SDL_Init(SDL_INIT_EVENTS);
 
 	handles_[0] = SDL_CreateWindow(std::string(title).c_str(),
 								   SDL_WINDOWPOS_CENTERED,
 								   SDL_WINDOWPOS_CENTERED,
 								   static_cast<int>(size.x),
 								   static_cast<int>(size.y),
-								   SDL_WINDOW_ALLOW_HIGHDPI);
+								   SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
 
@@ -131,15 +134,14 @@ void window::loop(const window_events& ev)
 	while (true)
 	{
 		SDL_Event e;
+
 		while (SDL_PollEvent(&e))
 		{
 			ImGui_ImplSDL2_ProcessEvent(&e);
-
 			switch (e.type)
 			{
 				case SDL_APP_TERMINATING: [[fallthrough]];
 				case SDL_QUIT: return;
-
 				case SDL_KEYDOWN:
 					if (e.key.repeat)
 					{
@@ -152,10 +154,17 @@ void window::loop(const window_events& ev)
 							ev.key_down(e.key.keysym.sym);
 					}
 					break;
-
 				case SDL_KEYUP:
 					if (ev.key_up)
 						ev.key_up(e.key.keysym.sym);
+					break;
+				case SDL_WINDOWEVENT:
+					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
+					{
+						// Handle window resize, e.g., by updating the viewport or any other necessary adjustments
+						int new_width  = e.window.data1;
+						int new_height = e.window.data2;
+					}
 					break;
 			}
 		}

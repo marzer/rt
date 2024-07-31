@@ -168,7 +168,7 @@ namespace
 			.key_down =
 				[&](int key) noexcept
 			{
-				log("key down: "sv, key);
+				// log("key down: "sv, key);
 				if (win.key('+', '-', 61, 45))
 				{
 					const auto all_renderers = renderers::all();
@@ -179,6 +179,7 @@ namespace
 					log("renderer index", renderer_index);
 					regular_renderer = create_renderer(all_renderers[renderer_index].name);
 				}
+
 				if (win.key(27)) // esc key
 					should_quit = true;
 				if (key == ' ')
@@ -219,7 +220,6 @@ namespace
 
 				bool moved_this_frame = false;
 				vec3 move_dir{};
-
 				if (win.key('w', 1073741906))
 					move_dir += vec3::constants::forward;
 				if (win.key('a', 1073741904))
