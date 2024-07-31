@@ -241,8 +241,8 @@ namespace
 
 				const auto prev_low_res = win.low_res;
 				win.low_res				= (clock::now() - last_move_time) < 0.5s;
-				backbuffer_dirty =
-					moved_this_frame || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
+				backbuffer_dirty = backbuffer_dirty || moved_this_frame || reloaded_this_frame || renderer_changed
+								|| (win.low_res != prev_low_res);
 				renderer_changed = false;
 				return !should_quit;
 			},

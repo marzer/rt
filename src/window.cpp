@@ -60,6 +60,11 @@ namespace
 #endif
 }
 
+static std::array<back_buffer, 2> create_back_buffers(vec2u size, SDL_Renderer* renderer)
+{
+	return { { back_buffer{ size, renderer }, back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer } } };
+}
+
 window::window(std::string_view title, vec2u size) //
 {
 	sdl_initialize();
@@ -80,8 +85,7 @@ window::window(std::string_view title, vec2u size) //
 	if (!handles_[1])
 		throw std::runtime_error{ SDL_GetError() };
 
-	back_buffers_[0] = back_buffer{ size, renderer_handle };
-	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer_handle };
+	back_buffers_ = create_back_buffers(size, renderer_handle);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -134,6 +138,7 @@ void window::loop(const window_events& ev)
 	while (true)
 	{
 		SDL_Event e;
+		bool backbuffer_dirty = false;
 
 		while (SDL_PollEvent(&e))
 		{
@@ -161,23 +166,32 @@ void window::loop(const window_events& ev)
 				case SDL_WINDOWEVENT:
 					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
 					{
-						// Handle window resize, e.g., by updating the viewport or any other necessary adjustments
-						int new_width  = e.window.data1;
-						int new_height = e.window.data2;
+						// auto new_resize = clock::now();
+
+						back_buffers_	 = create_back_buffers(vec2u{ static_cast<unsigned int>(e.window.data1),
+																	  static_cast<unsigned int>(e.window.data2) },
+															   renderer_handle);
+						backbuffer_dirty = true;
 					}
 					break;
 			}
 		}
 
+		// TODO: Use chronos to work out if the time since last resize is 250us of more, if so redraw, ADD IN A CHECK
+		// FOR IF THERE WAS ACTUALLY A RESIZE
+
+		// auto time_since_resize = clock::now();
+
+		// if ((time_since_resize - new_resize) >)
+
+		//////////////////////////draw logic///////////////////////////
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
-
 		auto time = clock::now();
 		auto dt	  = to_seconds(time - prev_time);
 		prev_time = time;
 
-		bool backbuffer_dirty = true;
 		if (ev.update)
 		{
 			if (!ev.update(std::min(dt, 0.1f), backbuffer_dirty))

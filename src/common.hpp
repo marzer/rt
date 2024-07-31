@@ -1,4 +1,10 @@
 #pragma once
+
+#if defined(__GNUC__) && __GNUC__ >= 13
+	#define SOAGEN_ASSUME(...) static_cast<void>(0)
+	#define MUU_ASSUME(...)	   static_cast<void>(0)
+#endif
+
 #include <muu/preprocessor.h>
 MUU_DISABLE_SPAM_WARNINGS;
 MUU_DISABLE_WARNINGS;
