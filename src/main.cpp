@@ -82,6 +82,8 @@ namespace
 	{
 		bool renderer_changed	   = false;
 		const auto create_renderer = [&](std::string_view name) -> renderer
+		bool renderer_changed	   = false;
+		const auto create_renderer = [&](std::string_view name) -> renderer
 		{
 			auto desc = find_renderer_by_name_fuzzy(name);
 			if (!desc)
@@ -96,6 +98,7 @@ namespace
 			r.description = desc;
 			r.object.reset(desc->create());
 			log("created renderer: ", name);
+			renderer_changed = true;
 			renderer_changed = true;
 			return r;
 		};
@@ -220,6 +223,7 @@ namespace
 
 				bool moved_this_frame = false;
 				vec3 move_dir{};
+
 				if (win.key('w', 1073741906))
 					move_dir += vec3::constants::forward;
 				if (win.key('a', 1073741904))
