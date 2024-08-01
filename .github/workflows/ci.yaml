@@ -44,7 +44,7 @@ jobs:
 
             - name: Install dependencies
               run: |
-                  sudo -H pip3 install --no-cache-dir --upgrade ninja meson
+                  sudo -H pip3 install --no-cache-dir --upgrade ninja meson --break-system-packages
 
             - name: Install lld
               if: ${{ startsWith(matrix.linker, 'lld')  }}
