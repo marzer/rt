@@ -82,8 +82,6 @@ namespace
 	{
 		bool renderer_changed	   = false;
 		const auto create_renderer = [&](std::string_view name) -> renderer
-		bool renderer_changed	   = false;
-		const auto create_renderer = [&](std::string_view name) -> renderer
 		{
 			auto desc = find_renderer_by_name_fuzzy(name);
 			if (!desc)
