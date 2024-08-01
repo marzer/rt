@@ -133,13 +133,14 @@ window::operator bool() const noexcept
 
 void window::loop(const window_events& ev)
 {
-	auto prev_time = clock::now();
+	auto prev_time		   = clock::now();
+	auto time_since_resize = clock::now();
+	bool window_resized	   = false;
 
 	while (true)
 	{
 		SDL_Event e;
 		bool backbuffer_dirty = false;
-
 		while (SDL_PollEvent(&e))
 		{
 			ImGui_ImplSDL2_ProcessEvent(&e);
@@ -166,31 +167,27 @@ void window::loop(const window_events& ev)
 				case SDL_WINDOWEVENT:
 					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
 					{
-						// auto new_resize = clock::now();
-
-						back_buffers_	 = create_back_buffers(vec2u{ static_cast<unsigned int>(e.window.data1),
-																	  static_cast<unsigned int>(e.window.data2) },
-															   renderer_handle);
-						backbuffer_dirty = true;
+						time_since_resize = clock::now();
+						back_buffers_	  = create_back_buffers(vec2u{ static_cast<unsigned int>(e.window.data1),
+																   static_cast<unsigned int>(e.window.data2) },
+															renderer_handle);
+						window_resized	  = true;
 					}
 					break;
 			}
 		}
 
-		// TODO: Use chronos to work out if the time since last resize is 250us of more, if so redraw, ADD IN A CHECK
-		// FOR IF THERE WAS ACTUALLY A RESIZE
-
-		// auto time_since_resize = clock::now();
-
-		// if ((time_since_resize - new_resize) >)
-
-		//////////////////////////draw logic///////////////////////////
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 		auto time = clock::now();
 		auto dt	  = to_seconds(time - prev_time);
 		prev_time = time;
+		if ((to_seconds(time - time_since_resize)) > 0.3 && window_resized)
+		{
+			backbuffer_dirty = true;
+			window_resized	 = false;
+		}
 
 		if (ev.update)
 		{
