@@ -155,21 +155,21 @@ namespace rt
 	{
 		MUU_PURE_INLINE_GETTER
 		MUU_CONSTEVAL
-		colour operator"" _rgba(unsigned long long rgba) noexcept
+		colour operator""_rgba(unsigned long long rgba) noexcept
 		{
 			return colour{ static_cast<uint32_t>(rgba & 0xFFFFFFFFull) };
 		}
 
 		MUU_PURE_INLINE_GETTER
 		MUU_CONSTEVAL
-		colour operator"" _rgb(unsigned long long rgba) noexcept
+		colour operator""_rgb(unsigned long long rgba) noexcept
 		{
 			return colour{ static_cast<uint32_t>(((rgba & 0xFFFFFFFFull) << 8) | 0x000000FFull) };
 		}
 
 		MUU_PURE_INLINE_GETTER
 		MUU_CONSTEVAL
-		colour operator"" _argb(unsigned long long argb) noexcept
+		colour operator""_argb(unsigned long long argb) noexcept
 		{
 			return colour{ static_cast<uint32_t>(((argb >> 24) & 0xFFull) | ((argb << 8) & 0xFFFFFF00ull)) };
 		}
