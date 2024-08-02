@@ -173,9 +173,7 @@ namespace
 
 	struct sm_ray_tracer final : renderer_interface
 	{
-		void render(const rt::scene& scene /*scene*/,
-					image_view& pxls /*pixels*/,
-					muu::thread_pool& threads /*threads*/) noexcept override
+		void render(const rt::scene& scene, image_view& pxls, muu::thread_pool& threads) noexcept override
 		{
 			const auto view = scene.camera.viewport(pxls.size());
 

@@ -5,8 +5,6 @@ MUU_DISABLE_WARNINGS;
 #include <SDL.h>
 #include <string>
 #include <atomic>
-#include <iostream>
-
 #include <mutex>
 #include <imgui.h>
 #include <imgui_impl_sdl2.h>
@@ -136,6 +134,8 @@ void window::loop(const window_events& ev)
 	auto prev_time		   = clock::now();
 	auto time_since_resize = clock::now();
 	bool window_resized	   = false;
+	unsigned new_width	   = 0;
+	unsigned new_height	   = 0;
 
 	while (true)
 	{
@@ -168,9 +168,8 @@ void window::loop(const window_events& ev)
 					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
 					{
 						time_since_resize = clock::now();
-						back_buffers_	  = create_back_buffers(vec2u{ static_cast<unsigned int>(e.window.data1),
-																   static_cast<unsigned int>(e.window.data2) },
-															renderer_handle);
+						new_width		  = static_cast<unsigned>(e.window.data1);
+						new_height		  = static_cast<unsigned>(e.window.data2);
 						window_resized	  = true;
 					}
 					break;
@@ -187,6 +186,7 @@ void window::loop(const window_events& ev)
 		{
 			backbuffer_dirty = true;
 			window_resized	 = false;
+			back_buffers_	 = create_back_buffers(vec2u{ new_width, new_height }, renderer_handle);
 		}
 
 		if (ev.update)

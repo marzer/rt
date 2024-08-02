@@ -168,7 +168,7 @@ namespace
 			.key_down =
 				[&](int key) noexcept
 			{
-				// log("key down: "sv, key);
+				log("key down: "sv, key);
 				if (win.key('+', '-', 61, 45))
 				{
 					const auto all_renderers = renderers::all();
