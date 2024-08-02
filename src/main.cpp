@@ -97,7 +97,6 @@ namespace
 			r.object.reset(desc->create());
 			log("created renderer: ", name);
 			renderer_changed = true;
-			renderer_changed = true;
 			return r;
 		};
 
