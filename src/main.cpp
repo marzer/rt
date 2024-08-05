@@ -179,6 +179,7 @@ namespace
 					log("renderer index", renderer_index);
 					regular_renderer = create_renderer(all_renderers[renderer_index].name);
 				}
+
 				if (win.key(27)) // esc key
 					should_quit = true;
 				if (key == ' ')
@@ -241,8 +242,8 @@ namespace
 
 				const auto prev_low_res = win.low_res;
 				win.low_res				= (clock::now() - last_move_time) < 0.5s;
-				backbuffer_dirty =
-					moved_this_frame || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
+				backbuffer_dirty = backbuffer_dirty || moved_this_frame || reloaded_this_frame || renderer_changed
+								|| (win.low_res != prev_low_res);
 				renderer_changed = false;
 				return !should_quit;
 			},

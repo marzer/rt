@@ -58,16 +58,22 @@ namespace
 #endif
 }
 
+static std::array<back_buffer, 2> create_back_buffers(vec2u size, SDL_Renderer* renderer)
+{
+	return { { back_buffer{ size, renderer }, back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer } } };
+}
+
 window::window(std::string_view title, vec2u size) //
 {
 	sdl_initialize();
+	SDL_Init(SDL_INIT_EVENTS);
 
 	handles_[0] = SDL_CreateWindow(std::string(title).c_str(),
 								   SDL_WINDOWPOS_CENTERED,
 								   SDL_WINDOWPOS_CENTERED,
 								   static_cast<int>(size.x),
 								   static_cast<int>(size.y),
-								   SDL_WINDOW_ALLOW_HIGHDPI);
+								   SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_RESIZABLE);
 	if (!handles_[0])
 		throw std::runtime_error{ SDL_GetError() };
 
@@ -77,8 +83,7 @@ window::window(std::string_view title, vec2u size) //
 	if (!handles_[1])
 		throw std::runtime_error{ SDL_GetError() };
 
-	back_buffers_[0] = back_buffer{ size, renderer_handle };
-	back_buffers_[1] = back_buffer{ vec2u{ vec2{ size } * low_res_factor }, renderer_handle };
+	back_buffers_ = create_back_buffers(size, renderer_handle);
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -126,20 +131,23 @@ window::operator bool() const noexcept
 
 void window::loop(const window_events& ev)
 {
-	auto prev_time = clock::now();
+	auto prev_time		   = clock::now();
+	auto time_since_resize = clock::now();
+	bool window_resized	   = false;
+	unsigned new_width	   = 0;
+	unsigned new_height	   = 0;
 
 	while (true)
 	{
 		SDL_Event e;
+		bool backbuffer_dirty = false;
 		while (SDL_PollEvent(&e))
 		{
 			ImGui_ImplSDL2_ProcessEvent(&e);
-
 			switch (e.type)
 			{
 				case SDL_APP_TERMINATING: [[fallthrough]];
 				case SDL_QUIT: return;
-
 				case SDL_KEYDOWN:
 					if (e.key.repeat)
 					{
@@ -152,10 +160,18 @@ void window::loop(const window_events& ev)
 							ev.key_down(e.key.keysym.sym);
 					}
 					break;
-
 				case SDL_KEYUP:
 					if (ev.key_up)
 						ev.key_up(e.key.keysym.sym);
+					break;
+				case SDL_WINDOWEVENT:
+					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
+					{
+						time_since_resize = clock::now();
+						new_width		  = static_cast<unsigned>(e.window.data1);
+						new_height		  = static_cast<unsigned>(e.window.data2);
+						window_resized	  = true;
+					}
 					break;
 			}
 		}
@@ -163,12 +179,16 @@ void window::loop(const window_events& ev)
 		ImGui_ImplSDLRenderer2_NewFrame();
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
-
 		auto time = clock::now();
 		auto dt	  = to_seconds(time - prev_time);
 		prev_time = time;
+		if ((to_seconds(time - time_since_resize)) > 0.3 && window_resized)
+		{
+			backbuffer_dirty = true;
+			window_resized	 = false;
+			back_buffers_	 = create_back_buffers(vec2u{ new_width, new_height }, renderer_handle);
+		}
 
-		bool backbuffer_dirty = true;
 		if (ev.update)
 		{
 			if (!ev.update(std::min(dt, 0.1f), backbuffer_dirty))
