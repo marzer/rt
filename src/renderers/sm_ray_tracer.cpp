@@ -3,6 +3,7 @@
 #include "../colour.hpp"
 #include "../random.hpp"
 #include "../renderer.hpp"
+
 MUU_DISABLE_WARNINGS;
 #include <muu/thread_pool.h>
 #include <muu/bounding_sphere.h>
@@ -137,6 +138,24 @@ namespace
 		return ray{ r.at(hit.distance), scatter };
 	}
 
+	// TODO: impliment this, it is currently metal settings
+	MUU_PURE_GETTER
+	static std::optional<ray> MUU_VECTORCALL dielectric_scatter(const rt::scene& scene,
+																const ray& r,
+																const hit_result& hit,
+																vec3& attenuation) noexcept
+	{
+		attenuation = vec3{ scene.materials.albedo()[hit.material] * scene.materials.reflectivity()[hit.material] };
+
+		vec3 scatter = reflect(vec3::normalize(r.direction), hit.normal)
+					 + scene.materials.roughness()[hit.material] * random_unit_vector();
+		if (vec3::dot(scatter, hit.normal) <= 0.0f)
+			return {};
+
+		scatter.normalize();
+		return ray{ r.at(hit.distance), scatter };
+	}
+
 	static constexpr auto scatter_funcs = []() noexcept
 	{
 		std::array<scatter_func*, magic_enum::enum_count<material_type>()> funcs{};
@@ -144,7 +163,8 @@ namespace
 		for (auto& func : funcs)
 			func = lambert_scatter; // default to lambert for unimplemented brdfs
 
-		funcs[muu::unwrap(material_type::metal)] = metal_scatter;
+		funcs[muu::unwrap(material_type::metal)]	  = metal_scatter;
+		funcs[muu::unwrap(material_type::dielectric)] = dielectric_scatter;
 
 		return funcs;
 	}();
@@ -162,6 +182,7 @@ namespace
 			return vec3::lerp(colours::white.rgb, vec3{ 0.5f, 0.7f, 1.0f }, 0.5f * (r.direction.y + 1.0f));
 
 		vec3 attenuation;
+
 		if (const auto scatter = scatter_funcs[static_cast<size_t>(scene.materials.type()[hit.material])](scene, //
 																										  r,
 																										  hit,
@@ -175,8 +196,7 @@ namespace
 	{
 		void render(const rt::scene& scene, image_view& pxls, muu::thread_pool& threads) noexcept override
 		{
-			const auto view = scene.camera.viewport(pxls.size());
-
+			const auto view	  = scene.camera.viewport(pxls.size());
 			const auto worker = [=, &scene](unsigned pixel_index) noexcept
 			{
 				const auto screen_pos = pxls.position_of(pixel_index);
