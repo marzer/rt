@@ -16,6 +16,7 @@ using namespace rt;
 
 namespace
 {
+
 	static constexpr float min_hit_dist = 0.001f;
 
 	struct hit_result
@@ -139,21 +140,82 @@ namespace
 	}
 
 	// TODO: impliment this, it is currently metal settings
+	// Here's how you might modify the dielectric_scatter function:
+
+	// Snell's Law: Calculate the refracted ray using Snell's law.
+	// Reflectance: Use the Schlick approximation to determine the probability of reflection vs. refraction.
+	// Attenuation: For dielectrics, this is typically just a constant (e.g., the color white) since they usually don't
+	// absorb much light.
+	// 	Refraction Calculation: The refract function calculates the refracted direction using Snell's law.
+	// Schlick's Approximation: The schlick function approximates the reflectance probability based on the angle and
+	// indices of refraction. Attenuation: Dielectrics typically don't change the color much, so it's set to white
+	// (vec3{1.0f, 1.0f, 1.0f}). Random Choice: A random number generator is used to decide between reflection and
+	// refraction based on the calculated probabilities. You might need to adapt the reflect, refract, and schlick
+	// functions based on your existing implementations.
+
+	vec3 reflect(const vec3& v, const vec3& n)
+	{
+		return v - 2 * vec3::dot(v, n) * n;
+	}
+
+	bool refract(const vec3& v, const vec3& n, float eta, vec3& refracted)
+	{
+		float cos_i	 = -vec3::dot(v, n);
+		float sin2_t = eta * eta * (1 - cos_i * cos_i);
+		if (sin2_t > 1.0f)
+		{
+			return false; // Total internal reflection
+		}
+		float cos_t = sqrt(1.0f - sin2_t);
+		refracted	= eta * v + (eta * cos_i - cos_t) * n;
+		return true;
+	}
+
+	float schlick(float cosine, float ref_idx)
+	{
+		float r0 = (1 - ref_idx) / (1 + ref_idx);
+		r0		 = r0 * r0;
+		return r0 + (1 - r0) * pow((1 - cosine), 5);
+	}
+
 	MUU_PURE_GETTER
 	static std::optional<ray> MUU_VECTORCALL dielectric_scatter(const rt::scene& scene,
 																const ray& r,
 																const hit_result& hit,
 																vec3& attenuation) noexcept
 	{
+		vec3 outward_normal;
+		vec3 reflected = reflect(r.direction, hit.normal);
+		float ni_over_nt;
+		vec3 refracted;
+		float reflect_prob;
+		float cosine;
+
 		attenuation = vec3{ scene.materials.albedo()[hit.material] * scene.materials.reflectivity()[hit.material] };
 
-		vec3 scatter = reflect(vec3::normalize(r.direction), hit.normal)
-					 + scene.materials.roughness()[hit.material] * random_unit_vector();
-		if (vec3::dot(scatter, hit.normal) <= 0.0f)
-			return {};
+		if (vec3::dot(r.direction, hit.normal) > 0.0f)
+		{
+			outward_normal = -hit.normal;
+			ni_over_nt	   = scene.materials.reflectivity()[hit.material];
+			cosine		   = scene.materials.reflectivity()[hit.material] * vec3::dot(r.direction, hit.normal)
+				   / r.direction.length();
+		}
+		else
+		{
+			outward_normal = hit.normal;
+			ni_over_nt	   = 1.0f / scene.materials.reflectivity()[hit.material];
+			cosine		   = -vec3::dot(r.direction, hit.normal) / r.direction.length();
+		}
 
-		scatter.normalize();
-		return ray{ r.at(hit.distance), scatter };
+		if (refract(r.direction, outward_normal, ni_over_nt, refracted))
+			reflect_prob = schlick(cosine, scene.materials.reflectivity()[hit.material]);
+		else
+			reflect_prob = 1.0f;
+
+		if (rt::random<float>() < reflect_prob)
+			return ray{ r.at(hit.distance), reflected };
+		else
+			return ray{ r.at(hit.distance), refracted };
 	}
 
 	static constexpr auto scatter_funcs = []() noexcept
@@ -162,9 +224,13 @@ namespace
 
 		for (auto& func : funcs)
 			func = lambert_scatter; // default to lambert for unimplemented brdfs
-
+		// TODO: is there a smarter way to do this
 		funcs[muu::unwrap(material_type::metal)]	  = metal_scatter;
 		funcs[muu::unwrap(material_type::dielectric)] = dielectric_scatter;
+		funcs[muu::unwrap(material_type::air)]		  = dielectric_scatter;
+		funcs[muu::unwrap(material_type::vacuum)]	  = dielectric_scatter;
+		funcs[muu::unwrap(material_type::water)]	  = dielectric_scatter;
+		funcs[muu::unwrap(material_type::ice)]		  = dielectric_scatter;
 
 		return funcs;
 	}();

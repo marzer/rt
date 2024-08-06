@@ -106,6 +106,11 @@ namespace rt
 	{
 		lambert,
 		metal,
-		dielectric
+		dielectric,
+		air,
+		vacuum,
+		water,
+		ice,
+		diamond,
 	};
 }

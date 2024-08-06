@@ -544,13 +544,16 @@ scene scene::load(std::string_view path_sv)
 			const auto type = deserialize(tbl, "type", material_type::lambert);
 
 			float reflectiveness;
-			// todo: SWITCH STATEMENT
-			if (type == material_type::metal)
-				reflectiveness = 0.8;
-			else if (type == material_type::dielectric)
-				reflectiveness = 1.000293; // setting for only window glass
-			else
-				reflectiveness = 0.5f;
+			switch (type)
+			{
+				case material_type::metal: reflectiveness = 0.8; break;
+				case material_type::dielectric: reflectiveness = 1.52; break;
+				case material_type::air: reflectiveness = 1.000293; break;
+				case material_type::vacuum: reflectiveness = 1.0; break;
+				case material_type::ice: reflectiveness = 1.31; break;
+				case material_type::water: reflectiveness = 1.333; break;
+				default: reflectiveness = 0.5f;
+			}
 
 			s.materials.push_back(deserialize(tbl, "name", ""s),
 								  type,
