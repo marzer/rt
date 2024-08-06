@@ -546,12 +546,12 @@ scene scene::load(std::string_view path_sv)
 			float reflectiveness;
 			switch (type)
 			{
-				case material_type::metal: reflectiveness = 0.8; break;
-				case material_type::dielectric: reflectiveness = 1.52; break;
-				case material_type::air: reflectiveness = 1.000293; break;
-				case material_type::vacuum: reflectiveness = 1.0; break;
-				case material_type::ice: reflectiveness = 1.31; break;
-				case material_type::water: reflectiveness = 1.333; break;
+				case material_type::metal: reflectiveness = 0.8f; break;
+				case material_type::dielectric: reflectiveness = 1.52f; break;
+				case material_type::air: reflectiveness = 1.000293f; break;
+				case material_type::vacuum: reflectiveness = 1.0f; break;
+				case material_type::ice: reflectiveness = 1.31f; break;
+				case material_type::water: reflectiveness = 1.333f; break;
 				default: reflectiveness = 0.5f;
 			}
 
