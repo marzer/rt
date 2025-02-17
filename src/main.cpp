@@ -192,14 +192,14 @@ namespace
 
 					   if (win.key(27)) // esc key
 						   should_quit = true;
-					   if (key == ' ')
+					   if (key == 'r')
 						   reload_requested = true;
 				   },
 
 				   .mouse_button_up =
 					   [&](int key) noexcept
 				   {
-					   if (key == SDL_BUTTON_LEFT)
+					   if (key == SDL_BUTTON_RIGHT)
 					   {
 						   mouse_dragging = false;
 					   }
@@ -208,7 +208,7 @@ namespace
 				   .mouse_button_down =
 					   [&](int key, float x, float y) noexcept
 				   {
-					   if (key == SDL_BUTTON_LEFT)
+					   if (key == SDL_BUTTON_RIGHT)
 					   {
 						   mouse_dragging = true;
 						   last_mouse_x	  = x;
@@ -220,21 +220,18 @@ namespace
 				   {
 					   if (mouse_dragging)
 					   {
-						   int dx = x - last_mouse_x;
-						   int dy = y - last_mouse_y;
+						   float dx = x - last_mouse_x;
+						   float dy = y - last_mouse_y;
 
 						   yaw_delta += dx * 0.1f;
 						   pitch_delta += dy * 0.1f;
 
 						   last_mouse_x = x;
 						   last_mouse_y = y;
-						   log("motion x: "sv, x);
-						   log("motion y: "sv, y);
 					   }
 				   },
 				   .update = [&](float delta_time, bool& backbuffer_dirty) noexcept -> bool
 				   {
-					   bool rotated_this_frame = false;
 					   if (first_loaded											//
 						   && !scene.path.empty()								//
 						   && last_scene_write_check.time_since_epoch().count() //
@@ -246,21 +243,6 @@ namespace
 						   {
 							   if (fs::last_write_time(scene.path) > last_scene_write)
 								   reload_requested = true;
-							   if (mouse_dragging)
-							   {
-								   if (yaw_delta != 0.0f)
-								   {
-									   scene.camera.yaw(yaw_delta * delta_time);
-									   yaw_delta		  = 0.0f;
-									   rotated_this_frame = true;
-								   }
-								   if (pitch_delta != 0.0f)
-								   {
-									   scene.camera.pitch(pitch_delta * delta_time);
-									   pitch_delta		  = 0.0f;
-									   rotated_this_frame = true;
-								   }
-							   }
 						   }
 						   catch (...)
 						   {}
@@ -282,7 +264,21 @@ namespace
 
 					   bool moved_this_frame = false;
 					   vec3 move_dir{};
-
+					   if (mouse_dragging)
+					   {
+						   if (yaw_delta != 0.0f)
+						   {
+							   scene.camera.yaw(yaw_delta * delta_time);
+							   yaw_delta		= 0.0f;
+							   moved_this_frame = true;
+						   }
+						   if (pitch_delta != 0.0f)
+						   {
+							   scene.camera.pitch(pitch_delta * delta_time);
+							   pitch_delta		= 0.0f;
+							   moved_this_frame = true;
+						   }
+					   }
 					   if (win.key('w', 1073741906))
 						   move_dir += vec3::constants::forward;
 					   if (win.key('a', 1073741904))
@@ -291,6 +287,10 @@ namespace
 						   move_dir += vec3::constants::backward;
 					   if (win.key('d', 1073741903))
 						   move_dir += vec3::constants::right;
+					   if (win.key(' '))
+						   move_dir += vec3::constants::up;
+					   if (win.key(1073742048))
+						   move_dir += vec3::constants::down;
 					   if (!muu::approx_zero(move_dir))
 					   {
 						   auto move = vec3::normalize(move_dir) * delta_time;
@@ -298,14 +298,16 @@ namespace
 						   {
 							   scene.camera.pose(scene.camera.position() + move, scene.camera.rotation());
 							   moved_this_frame = true;
-							   last_move_time	= clock::now();
 						   }
 					   }
-
+					   if (mouse_dragging)
+						   moved_this_frame = true;
+					   if (moved_this_frame)
+						   last_move_time = clock::now();
 					   const auto prev_low_res = win.low_res;
 					   win.low_res			   = (clock::now() - last_move_time) < 0.5s;
-					   backbuffer_dirty		   = backbuffer_dirty || rotated_this_frame || moved_this_frame
-									   || reloaded_this_frame || renderer_changed || (win.low_res != prev_low_res);
+					   backbuffer_dirty		   = backbuffer_dirty || moved_this_frame || reloaded_this_frame
+									   || renderer_changed || (win.low_res != prev_low_res);
 					   renderer_changed = false;
 					   return !should_quit;
 				   },

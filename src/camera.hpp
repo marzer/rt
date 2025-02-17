@@ -77,7 +77,6 @@ namespace rt
 
 		~camera() noexcept = default;
 
-		// TODO: MUU_PURE_INLINE GETTER?
 		constexpr void yaw(float angle) noexcept
 		{
 			mat3 yaw_matrix = mat3::from_axis_angle(vec3::constants::up, angle);
