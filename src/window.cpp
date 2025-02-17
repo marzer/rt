@@ -166,7 +166,9 @@ void window::loop(const window_events& ev)
 					break;
 				case SDL_MOUSEBUTTONDOWN:
 					if (ev.mouse_button_down)
-						ev.mouse_button_down(e.button.button, e.button.x, e.button.y);
+						ev.mouse_button_down(e.button.button,
+											 static_cast<float>(e.motion.x),
+											 static_cast<float>(e.motion.y));
 					break;
 				case SDL_MOUSEBUTTONUP:
 					if (ev.mouse_button_up)
