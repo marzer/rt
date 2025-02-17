@@ -174,7 +174,7 @@ void window::loop(const window_events& ev)
 					break;
 				case SDL_MOUSEMOTION:
 					if (ev.mouse_button_motion)
-						ev.mouse_button_motion(e.motion.x, e.motion.y);
+						ev.mouse_button_motion(static_cast<float>(e.motion.x), static_cast<float>(e.motion.y));
 					break;
 				case SDL_WINDOWEVENT:
 					if (e.window.event == SDL_WINDOWEVENT_RESIZED)
