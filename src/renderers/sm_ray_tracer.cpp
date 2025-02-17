@@ -166,7 +166,7 @@ namespace
 		{
 			return false; // Total internal reflection
 		}
-		float cos_t = sqrt(1.0f - sin2_t);
+		float cos_t = static_cast<float>(sqrt(1.0f - sin2_t));
 		refracted	= eta * v + (eta * cos_i - cos_t) * n;
 		return true;
 	}
@@ -175,7 +175,7 @@ namespace
 	{
 		float r0 = (1 - ref_idx) / (1 + ref_idx);
 		r0		 = r0 * r0;
-		return r0 + (1 - r0) * pow((1 - cosine), 5);
+		return static_cast<float>(r0 + (1 - r0) * pow((1 - cosine), 5));
 	}
 
 	MUU_PURE_GETTER
