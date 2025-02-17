@@ -62,7 +62,7 @@ jobs:
             - name: Configure
               run: |
                   CC=${{ matrix.compiler.cc }} CXX=${{ matrix.compiler.cxx }} CXX_LD=${{ matrix.linker }} meson setup build --buildtype=${{ matrix.type }}
-
+    
             - name: Build
               run: meson compile -C build --jobs -1
 
