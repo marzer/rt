@@ -2,7 +2,6 @@
 #include "common.hpp"
 #include "camera.hpp"
 #include "soa.hpp"
-#include <iostream>
 
 namespace rt
 {

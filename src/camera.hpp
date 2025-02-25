@@ -77,13 +77,13 @@ namespace rt
 
 		~camera() noexcept = default;
 
-		constexpr void yaw(float angle) noexcept
+		constexpr void rotate_yaw(float angle) noexcept
 		{
 			mat3 yaw_matrix = mat3::from_axis_angle(vec3::constants::up, angle);
 			rot_			= yaw_matrix * rot_;
 		}
 
-		constexpr void pitch(float angle) noexcept
+		constexpr void rotate_pitch(float angle) noexcept
 		{
 			vec3 right		  = rot_.transform_direction(vec3::constants::right);
 			mat3 pitch_matrix = mat3::from_axis_angle(right, angle);

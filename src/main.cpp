@@ -268,13 +268,13 @@ namespace
 					   {
 						   if (yaw_delta != 0.0f)
 						   {
-							   scene.camera.yaw(yaw_delta * delta_time);
+							   scene.camera.rotate_yaw(yaw_delta * delta_time);
 							   yaw_delta		= 0.0f;
 							   moved_this_frame = true;
 						   }
 						   if (pitch_delta != 0.0f)
 						   {
-							   scene.camera.pitch(pitch_delta * delta_time);
+							   scene.camera.rotate_pitch(pitch_delta * delta_time);
 							   pitch_delta		= 0.0f;
 							   moved_this_frame = true;
 						   }
