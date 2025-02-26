@@ -543,11 +543,23 @@ scene scene::load(std::string_view path_sv)
 		{
 			const auto type = deserialize(tbl, "type", material_type::lambert);
 
+			float reflectiveness;
+			switch (type)
+			{
+				case material_type::metal: reflectiveness = 0.8f; break;
+				case material_type::dielectric: reflectiveness = 1.52f; break;
+				case material_type::air: reflectiveness = 1.000293f; break;
+				case material_type::vacuum: reflectiveness = 1.0f; break;
+				case material_type::ice: reflectiveness = 1.31f; break;
+				case material_type::water: reflectiveness = 1.333f; break;
+				default: reflectiveness = 0.5f;
+			}
+
 			s.materials.push_back(deserialize(tbl, "name", ""s),
 								  type,
 								  deserialize(tbl, "albedo", colours::fuchsia),
-								  deserialize(tbl, "roughness", 0.05f),
-								  deserialize(tbl, "reflectivity", type == material_type::metal ? 0.8f : 0.5f));
+								  deserialize(tbl, "roughness", type == material_type::dielectric ? 0.0f : 0.5f),
+								  deserialize(tbl, "reflectivity", reflectiveness));
 		}
 	}
 	if (s.materials.empty())

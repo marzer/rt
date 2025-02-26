@@ -1,0 +1,30 @@
+samples_per_pixel = 200
+
+camera = { position = [0, 1, 7], direction = 'forward' }
+
+materials = [
+    { type = 'lambert', albedo = 'gray_33' },
+    { type = 'vacuum', albedo = 'fuchsia' },
+    { type = 'metal',   albedo = 'white',     roughness = 0.05 },
+    { type = 'dielectric',   albedo = 'aquamarine', roughness = 0.0},
+    { type = 'air',   albedo = 'aquamarine', roughness = 0.0},
+    { type = 'water',   albedo = 'aquamarine', roughness = 0.0},
+    { type = 'ice',   albedo = 'aquamarine', roughness = 0.0},
+
+
+]
+
+planes = [
+    #{ material = 0 }
+]
+
+spheres = [
+    { material = 0, position = [0 ,-1000, 0], radius = 1000 },
+    { material = 1, position = [-3, 0.5, 0] },
+    { material = 2, position = [-3, 2, 0] },
+    { material = 3, position = [-1, 0.5, 0] },
+    { material = 4, position = [-1, 2, 0] },
+    { material = 5, position = [1, 0.5, 0] },
+    { material = 6, position = [1, 2, 0] },
+
+]

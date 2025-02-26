@@ -136,7 +136,6 @@ void window::loop(const window_events& ev)
 	bool window_resized	   = false;
 	unsigned new_width	   = 0;
 	unsigned new_height	   = 0;
-
 	while (true)
 	{
 		SDL_Event e;
@@ -163,6 +162,20 @@ void window::loop(const window_events& ev)
 				case SDL_KEYUP:
 					if (ev.key_up)
 						ev.key_up(e.key.keysym.sym);
+					break;
+				case SDL_MOUSEBUTTONDOWN:
+					if (ev.mouse_button_down)
+						ev.mouse_button_down(e.button.button,
+											 static_cast<float>(e.motion.x),
+											 static_cast<float>(e.motion.y));
+					break;
+				case SDL_MOUSEBUTTONUP:
+					if (ev.mouse_button_up)
+						ev.mouse_button_up(e.button.button);
+					break;
+				case SDL_MOUSEMOTION:
+					if (ev.mouse_button_motion)
+						ev.mouse_button_motion(static_cast<float>(e.motion.x), static_cast<float>(e.motion.y));
 					break;
 				case SDL_WINDOWEVENT:
 					if (e.window.event == SDL_WINDOWEVENT_RESIZED)

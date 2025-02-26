@@ -11,9 +11,13 @@ namespace rt
 	struct window_events
 	{
 		std::function<void(int /* virtual key code */)> key_down;
+		std::function<void(int /* virtual key code */)> mouse_button_up;
+		std::function<void(int /* virtual key code */, float /*mouse pos x*/, float /* mouse y*/)> mouse_button_down;
+		std::function<void(float /* virtual key code */, float /* virtual key code */)> mouse_button_motion;
 		std::function<void(int /* virtual key code */)> key_held;
 		std::function<void(int /* virtual key code */)> key_up;
 		std::function<bool(float /* delta_time */, bool& /* backbuffer_dirty */)> update;
+
 		std::function<void(image_view)> render;
 	};
 
@@ -27,7 +31,8 @@ namespace rt
 		static bool get_key(int) noexcept;
 
 	  public:
-		bool low_res = false;
+		bool low_res	= false;
+		bool mouse_down = false; //
 
 		window() noexcept = default;
 

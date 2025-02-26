@@ -20,7 +20,7 @@ namespace rt
 		MUU_PURE_GETTER
 		constexpr vec2 world_to_screen(const vec3& world_pos, float& depth_out) const noexcept
 		{
-			auto pos_in_view_space = view_projection* vec4{ world_pos, 1.0f };
+			auto pos_in_view_space = view_projection * vec4{ world_pos, 1.0f };
 			if (pos_in_view_space.w != 0.0f)
 				pos_in_view_space /= pos_in_view_space.w;
 
@@ -33,14 +33,15 @@ namespace rt
 		MUU_PURE_GETTER
 		constexpr vec2 world_to_screen(const vec3& world_pos) const noexcept
 		{
-			[[maybe_unused]] float f;
+			[[maybe_unused]]
+			float f;
 			return world_to_screen(world_pos, f);
 		}
 
 		MUU_PURE_GETTER
 		constexpr vec3 screen_to_world(const vec2& screen_pos, float depth = 0.0f) const noexcept
 		{
-			const vec3 pos_in_view_space = { 2.0f * (screen_pos.x /  static_cast<float>(size.x)) - 1.0f,
+			const vec3 pos_in_view_space = { 2.0f * (screen_pos.x / static_cast<float>(size.x)) - 1.0f,
 											 -2.0f * (screen_pos.y / static_cast<float>(size.y)) + 1.0f,
 											 depth };
 			return inverse_view_projection.transform_position(pos_in_view_space);
@@ -75,6 +76,19 @@ namespace rt
 		constexpr camera& operator=(const camera&) noexcept = default;
 
 		~camera() noexcept = default;
+
+		constexpr void rotate_yaw(float angle) noexcept
+		{
+			mat3 yaw_matrix = mat3::from_axis_angle(vec3::constants::up, angle);
+			rot_			= yaw_matrix * rot_;
+		}
+
+		constexpr void rotate_pitch(float angle) noexcept
+		{
+			vec3 right		  = rot_.transform_direction(vec3::constants::right);
+			mat3 pitch_matrix = mat3::from_axis_angle(right, angle);
+			rot_			  = pitch_matrix * rot_;
+		}
 
 		MUU_PURE_INLINE_GETTER
 		constexpr const vec3& position() const noexcept
