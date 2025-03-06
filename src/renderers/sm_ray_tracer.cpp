@@ -3,6 +3,7 @@
 #include "../colour.hpp"
 #include "../random.hpp"
 #include "../renderer.hpp"
+#include <iostream> //TODO: REMOVE
 
 MUU_DISABLE_WARNINGS;
 #include <muu/thread_pool.h>
@@ -86,10 +87,51 @@ namespace
 						   .material = scene.spheres.material()[*hit_index] };
 	}
 
-	MUU_PURE_GETTER
-	static hit_result MUU_VECTORCALL test_boxes(const rt::scene& /*scene*/, const ray /*r*/) noexcept
+	vec3 box_normal(vec3 p, vec3 min, vec3 max)
 	{
-		return { -1 };
+		vec3 center	  = (min + max) * 0.5f; // Compute the center of the box
+		vec3 localPos = p - center;			// Convert point to local space
+		vec3 absPos	  = abs(localPos);		// Get absolute values
+
+		// Determine dominant axis to find the face normal
+		if (absPos.x > absPos.y && absPos.x > absPos.z)
+			return vec3((localPos.x > 0) ? 1.0f : -1.0f, 0.0f, 0.0f);
+		else if (absPos.y > absPos.x && absPos.y > absPos.z)
+			return vec3(0.0f, (localPos.y > 0) ? 1.0f : -1.0f, 0.0f);
+		else
+			return vec3(0.0f, 0.0f, (localPos.z > 0) ? 1.0f : -1.0f);
+	}
+
+	MUU_PURE_GETTER
+	static hit_result MUU_VECTORCALL test_boxes(const rt::scene& scene, const ray r) noexcept
+	{
+		if (scene.boxes.size() == 0)
+		{
+			return { -1 };
+		}
+
+		std::optional<size_t> hit_index;
+		float hit_dist{};
+
+		for (size_t i = 0; i < scene.boxes.size(); i++)
+		{
+			const auto obj = scene.boxes.value()[i];
+			const auto hit = r.hits(obj);
+			if (!hit || *hit < min_hit_dist || (hit_index && hit_dist <= *hit))
+				continue;
+
+			hit_index = i;
+			hit_dist  = *hit;
+		}
+
+		if (!hit_index)
+			return { -1 };
+
+		vec3 normal = box_normal(r.at(hit_dist),
+								 scene.boxes.value()[*hit_index].min_corner(),
+								 scene.boxes.value()[*hit_index].max_corner());
+
+		return hit_result{ .distance = hit_dist, .normal = normal, .material = scene.boxes.material()[*hit_index] };
 	}
 
 	MUU_PURE_GETTER
@@ -138,20 +180,6 @@ namespace
 		scatter.normalize();
 		return ray{ r.at(hit.distance), scatter };
 	}
-
-	// TODO: impliment this, it is currently metal settings
-	// Here's how you might modify the dielectric_scatter function:
-
-	// Snell's Law: Calculate the refracted ray using Snell's law.
-	// Reflectance: Use the Schlick approximation to determine the probability of reflection vs. refraction.
-	// Attenuation: For dielectrics, this is typically just a constant (e.g., the color white) since they usually don't
-	// absorb much light.
-	// 	Refraction Calculation: The refract function calculates the refracted direction using Snell's law.
-	// Schlick's Approximation: The schlick function approximates the reflectance probability based on the angle and
-	// indices of refraction. Attenuation: Dielectrics typically don't change the color much, so it's set to white
-	// (vec3{1.0f, 1.0f, 1.0f}). Random Choice: A random number generator is used to decide between reflection and
-	// refraction based on the calculated probabilities. You might need to adapt the reflect, refract, and schlick
-	// functions based on your existing implementations.
 
 	vec3 reflect(const vec3& v, const vec3& n)
 	{

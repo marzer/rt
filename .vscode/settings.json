@@ -15,6 +15,12 @@
 	},
 	"files.associations": {
 		"string_view": "cpp",
-		"ostream": "cpp"
+		"ostream": "cpp",
+		"*.tcc": "cpp",
+		"chrono": "cpp",
+		"optional": "cpp",
+		"format": "cpp",
+		"system_error": "cpp",
+		"regex": "cpp"
 	}
 }
