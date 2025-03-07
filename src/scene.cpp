@@ -480,22 +480,27 @@ namespace
 		std::array{ "scenes/"sv, "../scenes/"sv, "../../scenes/"sv, ""sv, "../"sv, "../../"sv };
 }
 
-scene scene::load(std::string_view path_sv)
+scene scene::load(const std::string_view path_sv)
 {
 	if (path_sv.empty())
 		throw std::runtime_error{ "no scene file path provided" };
-
+	std::cout << "2: " << path_sv << std::endl;
 	scene s;
+	// TODO: DATA LOST HERE
+	std::cout << "3: " << path_sv << std::endl;
 	toml::table config;
+	std::cout << "4:	" << path_sv << std::endl;
 	if (path_sv == "-"sv)
 	{
 		config = toml::parse(std::cin, "stdin"sv);
 	}
 	else
 	{
-		fs::path path{ path_sv };
+		std::cout << "start else:	" << path_sv << std::endl;
+		fs::path path{ std::string(path_sv) };
+		std::cout << "before mp:	" << path << std::endl;
 		path.make_preferred();
-
+		std::cout << "after:	" << path << std::endl;
 		bool ok = false;
 		if (path.is_relative())
 		{
@@ -510,8 +515,10 @@ scene scene::load(std::string_view path_sv)
 
 				if (fs::is_regular_file(p))
 				{
+					std::cout << "before:	" << path << std::endl;
 					path = std::move(p);
-					ok	 = true;
+					std::cout << "after:	" << path << std::endl;
+					ok = true;
 					break;
 				}
 			}
@@ -522,7 +529,11 @@ scene scene::load(std::string_view path_sv)
 		}
 
 		if (!ok)
-			throw std::runtime_error{ "scene path '"s + path.string() + "' did not exist or was not a file" };
+			throw std::runtime_error{ "scene path '"s + path.string()
+									  + "' did not exist or was not a file" }; // TODO:
+																			   // its
+																			   // throwing
+																			   // here
 
 		config = toml::parse_file(path.string());
 		s.path = path.string();

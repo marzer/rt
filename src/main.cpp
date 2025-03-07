@@ -122,7 +122,10 @@ namespace
 				if (path.empty())
 					scene = scene::load_first_available();
 				else
-					scene = scene::load(path);
+				{
+					std::cout << "loading this path:	" << path << std::endl;
+					scene = scene::load(path); // TODO:: it is being loaded here
+				}
 			}
 			catch (const std::exception& ex)
 			{
