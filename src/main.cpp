@@ -118,14 +118,11 @@ namespace
 
 			try
 			{
-				const auto path = muu::trim(args.get<std::string>("scene"));
+				const auto path = std::string(muu::trim(args.get<std::string>("scene")));
 				if (path.empty())
 					scene = scene::load_first_available();
 				else
-				{
-					std::cout << "loading this path:	" << path << std::endl;
-					scene = scene::load(path); // TODO:: it is being loaded here
-				}
+					scene = scene::load(path);
 			}
 			catch (const std::exception& ex)
 			{
