@@ -87,8 +87,30 @@ namespace
 	}
 
 	MUU_PURE_GETTER
-	static hit_result MUU_VECTORCALL test_boxes(const rt::scene& /*scene*/, const ray /*r*/) noexcept
+	static hit_result MUU_VECTORCALL test_boxes(const rt::scene& scene, const ray r) noexcept
 	{
+		MUU_FMA_BLOCK;
+
+		std::optional<size_t> hit_index;
+		float hit_dist{};
+
+		for (size_t i = 0; i < scene.boxes.size(); i++)
+		{
+			const auto obj = scene.boxes.value()[i];
+			const auto hit = r.hits(obj);
+			if (!hit || *hit < min_hit_dist || (hit_index && hit_dist <= *hit))
+				continue;
+
+			hit_index = i;
+			hit_dist  = *hit;
+		}
+
+		if (!hit_index)
+			return { -1 };
+
+		return hit_result{ .distance = hit_dist,
+						   .normal	 = vec3::direction(scene.boxes.value()[*hit_index].center, r.at(hit_dist)),
+						   .material = scene.boxes.material()[*hit_index] };
 		return { -1 };
 	}
 
