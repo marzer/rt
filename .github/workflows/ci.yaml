@@ -93,6 +93,7 @@ jobs:
 
             - name: Configure
               run: |
+                  set PKG_CONFIG=null
                   meson setup build --vsenv --buildtype=${{ matrix.type }}
 
             - name: Build
