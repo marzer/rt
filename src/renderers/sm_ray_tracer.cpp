@@ -111,7 +111,6 @@ namespace
 		return hit_result{ .distance = hit_dist,
 						   .normal	 = vec3::direction(scene.boxes.value()[*hit_index].center, r.at(hit_dist)),
 						   .material = scene.boxes.material()[*hit_index] };
-		return { -1 };
 	}
 
 	MUU_PURE_GETTER
