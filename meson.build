@@ -79,9 +79,10 @@ global_args = cpp.get_supported_arguments(
 	'/ZH:SHA_256'
 )
 
-if host_machine.system() == 'windows' and cc.get_id() == 'msvc'
+if host_machine.system() == 'windows' and cpp.get_id() == 'msvc'
     add_project_arguments('/FIchrono', language: 'cpp')
 endif
+
 if is_msvc
 	global_args += cpp.get_supported_arguments('/FS')
 endif
